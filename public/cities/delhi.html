@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DELHI.EXE — Coming Soon</title>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e14;font-family:'Silkscreen','Courier New',monospace;color:#ffa500;height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none}
+#hd{background:#0c1218;border-bottom:3px solid #2a2218;padding:0 12px;display:flex;align-items:center;gap:10px;height:44px}
+#hd h1{font-size:12px;letter-spacing:3px;text-shadow:0 0 14px rgba(255,165,0,.4)}
+.wip-badge{font-size:7px;padding:2px 6px;background:#ffa50020;border:1px solid #ffa500;color:#ffcc66;letter-spacing:1px}
+#hd-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+#hd-r span{font-size:7px;color:#665530}
+#main{flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+#overlay{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,14,20,.5);z-index:5}
+.wip-title{font-size:clamp(20px,4vw,36px);letter-spacing:6px;margin-bottom:12px;text-shadow:0 0 20px rgba(255,165,0,.3)}
+.wip-sub{font-size:clamp(7px,1.2vw,10px);color:#886620;letter-spacing:3px;line-height:2.5;text-align:center;max-width:500px}
+.wip-neighborhoods{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:20px;max-width:500px}
+.nb{font-size:6px;padding:3px 8px;border:1px solid #ffa50033;color:#aa7720;letter-spacing:1px;background:rgba(255,165,0,.03)}
+.nb.mapped{border-color:#ffa50066;color:#ffa500;background:rgba(255,165,0,.08)}
+.progress-bar{width:300px;height:8px;background:#1a1408;border:1px solid #2a2218;margin-top:20px;position:relative;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#ffa500,#ff6600);width:15%;transition:width 2s}
+.progress-label{font-size:6px;color:#665530;margin-top:4px;letter-spacing:1px}
+.back-btn{margin-top:24px;padding:8px 20px;background:none;border:2px solid #ffa50044;color:#ffa500;font-family:inherit;font-size:8px;letter-spacing:3px;cursor:pointer;text-decoration:none;display:inline-block}
+.back-btn:hover{background:rgba(255,165,0,.08);border-color:#ffa500}
+#sources{display:flex;gap:6px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.src{font-size:5px;padding:2px 5px;border:1px solid #ffa50022;color:#775520;letter-spacing:.5px}
+#ft{background:#0c1218;border-top:3px solid #2a2218;padding:6px 12px;display:flex;gap:8px;align-items:center;justify-content:center;font-size:6px;color:#3a2a10;letter-spacing:1px}
+</style>
+</head>
+<body>
+<a href="../" style="position:fixed;top:4px;left:4px;z-index:99;font-family:'Silkscreen',monospace;font-size:6px;color:#ffa500;text-decoration:none;padding:2px 6px;border:1px solid #2a2218;background:rgba(10,14,20,.9);letter-spacing:1px">◀ CITYSCOPE</a>
+<div id="hd">
+  <h1>◈ DELHI.EXE</h1>
+  <span class="wip-badge">◆ WORK IN PROGRESS</span>
+  <div id="hd-r">
+    <span>MAPPING NEIGHBORHOODS...</span>
+  </div>
+</div>
+<div id="main">
+  <canvas id="map" width="800" height="600"></canvas>
+  <div id="overlay">
+    <div class="wip-title">◈ DELHI NCR</div>
+    <div class="wip-sub">
+      WE'RE MAPPING DELHI'S NEIGHBORHOODS, EVENTS,<br>
+      AND PIXEL ART ONE TILE AT A TIME.<br><br>
+      CONNAUGHT PLACE · HAUZ KHAS · LAJPAT NAGAR<br>
+      SAKET · NOIDA · GURGAON · DWARKA · CHANDNI CHOWK
+    </div>
+    <div class="wip-neighborhoods">
+      <span class="nb mapped">CONNAUGHT PLACE</span>
+      <span class="nb mapped">HAUZ KHAS</span>
+      <span class="nb mapped">CHANDNI CHOWK</span>
+      <span class="nb">SAKET</span>
+      <span class="nb">LAJPAT NAGAR</span>
+      <span class="nb">GREATER KAILASH</span>
+      <span class="nb">DEFENCE COLONY</span>
+      <span class="nb">NOIDA</span>
+      <span class="nb">GURGAON / CYBER CITY</span>
+      <span class="nb">DWARKA</span>
+      <span class="nb">VASANT KUNJ</span>
+      <span class="nb">NEHRU PLACE</span>
+      <span class="nb">JANPATH</span>
+      <span class="nb">SOUTH EX</span>
+      <span class="nb">KHAN MARKET</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="pf"></div></div>
+    <div class="progress-label">15% MAPPED — ESTIMATED LAUNCH: SOON™</div>
+    <div id="sources">
+      <span class="src">LUMA</span>
+      <span class="src">DISTRICT (ZOMATO)</span>
+      <span class="src">BOOKMYSHOW</span>
+      <span class="src">EVENTBRITE</span>
+      <span class="src">TOWNSCRIPT</span>
+      <span class="src">ALLEVENTS</span>
+      <span class="src">MEETUP</span>
+      <span class="src">ECHAI VENTURES</span>
+    </div>
+    <a href="../" class="back-btn">◀ BACK TO CITYSCOPE</a>
+  </div>
+</div>
+<div id="ft">DELHI NCR · 3 NEIGHBORHOODS MAPPED · 15 PLANNED · HELP US MAP FASTER → CONTRIBUTE ON GITHUB</div>
+<script>
+const cv=document.getElementById('map'),cx=cv.getContext('2d');
+let frame=0;
+function H(r,c){return(r*73856093^c*19349663)&0x7FFFFFFF}
+const TS=10,CO=80,RO=60;
+
+function render(){
+  frame++;
+  cx.fillStyle='#3a3020';cx.fillRect(0,0,cv.width,cv.height);
+
+  for(let r=0;r<RO;r++){
+    for(let c=0;c<CO;c++){
+      const x=c*TS,y=r*TS;
+      // Delhi's rough shape
+      if(c<5||c>75||r<3||r>57)continue;
+
+      // Building tiles (sepia/dusty)
+      if(H(r,c)%5===0){
+        // Road
+        cx.fillStyle='#584828';cx.fillRect(x,y,TS,TS);
+        if((c+Math.floor(frame/16))%5===0){cx.fillStyle='rgba(255,200,60,.08)';cx.fillRect(x+3,y+4,4,2)}
+      } else if(H(r,c)%7===0){
+        // Park (Lodhi Garden, etc)
+        cx.fillStyle='#1a3a10';cx.fillRect(x,y,TS,TS);
+        if(H(r,c)%2===0){cx.fillStyle='#0e2808';cx.fillRect(x+3,y+2,4,4)}
+      } else {
+        // Building
+        cx.fillStyle=['#3a2818','#4a3828','#3a3020','#483828'][H(r,c)%4];
+        cx.fillRect(x,y,TS,TS);
+        cx.fillStyle='#2a1a08';cx.fillRect(x+1,y+1,TS-2,2);
+        // Dim windows
+        if(H(r*13,c*17)%4>1){cx.fillStyle='rgba(255,200,60,.15)';cx.fillRect(x+2,y+4,2,2);cx.fillRect(x+6,y+4,2,2)}
+      }
+    }
+  }
+
+  // Construction diagonal stripes (animated)
+  cx.save();
+  cx.globalAlpha=0.03+Math.sin(frame*0.02)*0.01;
+  cx.strokeStyle='#ffa500';cx.lineWidth=3;
+  for(let i=-cv.height;i<cv.width+cv.height;i+=30){
+    cx.beginPath();cx.moveTo(i,0);cx.lineTo(i-cv.height,cv.height);cx.stroke();
+  }
+  cx.restore();
+
+  // India Gate landmark (center)
+  const igx=cv.width/2-15,igy=cv.height/2-30;
+  cx.fillStyle='#4a3a20';cx.fillRect(igx,igy+10,30,20);
+  cx.fillStyle='#5a4a30';cx.fillRect(igx+5,igy+5,20,8);cx.fillRect(igx+8,igy,14,6);cx.fillRect(igx+10,igy-3,10,4);
+  cx.fillStyle='#6a5a40';cx.fillRect(igx+12,igy-5,6,3);
+
+  // Pulsing "constructing" dots
+  for(let i=0;i<8;i++){
+    const dx=H(i,0)%cv.width,dy=H(0,i)%cv.height;
+    const a=.2+Math.sin(frame*.04+i)*.15;
+    cx.fillStyle=`rgba(255,165,0,${a})`;
+    cx.fillRect(dx-2,dy-2,4,4);
+  }
+
+  requestAnimationFrame(render);
+}
+
+// Animate progress bar
+setTimeout(()=>{document.getElementById('pf').style.width='18%'},2000);
+
+render();
+</script>
+</body>
+</html>

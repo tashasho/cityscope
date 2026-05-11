@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BENGALURU.EXE — Full City Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060e18;--bg2:#0a1424;--bdr:#1a2e48;--txt:#ffe8a0;--dim:#4a6a8a}
+body{background:var(--bg);font-family:'Silkscreen','Courier New',monospace;color:var(--txt);height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none}
+#hd{background:var(--bg2);border-bottom:3px solid var(--bdr);padding:0 10px;display:flex;align-items:center;gap:6px;flex-shrink:0;height:42px}
+#hd h1{font-size:11px;letter-spacing:3px;text-shadow:0 0 12px rgba(255,232,160,.4)}
+.sb{font-size:5px;padding:1px 4px;letter-spacing:1px;border:1px solid;font-weight:700}
+#hd-r{margin-left:auto;display:flex;gap:5px;align-items:center}
+#ev-ct{font-size:5px;color:var(--dim)}
+#ck{font-size:8px;color:#78ffd6;letter-spacing:2px}
+.mb{padding:2px 6px;border:1px solid var(--bdr);background:none;color:var(--txt);cursor:pointer;font-family:inherit;font-size:5px;letter-spacing:1px}
+.mb:hover,.mb.on{background:rgba(255,255,255,.08)}
+#main{flex:1;display:flex;overflow:hidden;min-height:0}
+#map-area{flex:1;overflow:hidden;background:#040a12;position:relative;cursor:grab}
+#map-area:active{cursor:grabbing}
+#map{image-rendering:pixelated;image-rendering:crisp-edges;position:absolute;top:0;left:0;transform-origin:0 0}
+#minimap{position:absolute;bottom:8px;left:8px;width:120px;height:80px;border:2px solid var(--bdr);background:rgba(4,10,18,.9);z-index:5;image-rendering:pixelated;cursor:pointer}
+#minimap canvas{width:100%;height:100%;image-rendering:pixelated}
+#mini-vp{position:absolute;border:1px solid #ffe8a0;pointer-events:none}
+#zoom-info{position:absolute;bottom:8px;right:310px;font-size:6px;color:var(--dim);z-index:5}
+#rpanel{width:300px;flex-shrink:0;background:var(--bg2);border-left:3px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden;transition:width .2s}
+#rpanel.closed{width:0;border:none}
+#street-view{flex-shrink:0;border-bottom:2px solid var(--bdr);position:relative;height:150px;background:#040a12;overflow:hidden}
+#street-view canvas{image-rendering:pixelated;width:100%;height:100%}
+#sv-label{position:absolute;bottom:4px;left:6px;font-size:5px;color:var(--txt);text-shadow:1px 1px 0 #000;letter-spacing:1px;opacity:.8}
+#sv-coords{position:absolute;top:4px;right:6px;font-size:5px;color:#78ffd6;text-shadow:1px 1px 0 #000;letter-spacing:.5px;opacity:.6}
+#rpanel-content{flex:1;overflow-y:auto;padding:10px}
+.vn{font-size:9px;color:var(--txt);margin-bottom:2px;line-height:1.7}
+.vs{font-size:5px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--bdr);letter-spacing:1px}
+.vibe-tag{font-size:5px;padding:2px 4px;margin-bottom:8px;border-left:2px solid;display:inline-block;background:rgba(255,255,255,.02);font-style:italic}
+.ec{background:rgba(5,13,24,.8);border:1px solid #12202e;padding:8px;margin-bottom:6px}
+.ec:hover{border-color:#2a4460}
+.et{font-size:7px;line-height:1.6;margin-bottom:3px}
+.eby{font-size:5px;color:var(--dim);margin-bottom:3px}
+.em{font-size:6px;color:#5a7a9a;line-height:1.8}
+.tgs{margin-top:4px;display:flex;flex-wrap:wrap;gap:2px}
+.tgs span{font-size:4px;padding:1px 3px;border:1px solid;letter-spacing:.5px;text-transform:uppercase}
+.st{display:inline-block;font-size:4px;padding:1px 3px;margin-top:2px;letter-spacing:.5px;font-weight:700}
+.st-s{background:#ff444430;border:1px solid #ff4444;color:#ff8888}
+.st-w{background:#ffa50030;border:1px solid #ffa500;color:#ffcc66}
+.st-f{background:#00ff8830;border:1px solid #00ff88;color:#88ffbb}
+.abar{height:2px;background:#0e1a28;margin-top:3px}.afill{height:100%}
+.lnk{display:inline-block;margin-top:3px;font-size:5px;cursor:pointer;text-decoration:none;letter-spacing:.5px}
+#all-events{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(6,14,24,.96);z-index:20;overflow-y:auto;padding:14px}
+#all-events.show{display:block}
+#ae-close{position:fixed;top:50px;right:12px;background:var(--bg2);border:2px solid var(--bdr);color:var(--txt);cursor:pointer;font-family:inherit;font-size:9px;width:24px;height:24px;z-index:25;text-align:center;line-height:20px}
+#ae-header{font-size:9px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--bdr)}
+#ae-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px}
+.ae-card{background:rgba(10,20,36,.9);border:1px solid #14243a;padding:8px}
+.ae-card:hover{border-color:var(--dim)}
+.ae-src{font-size:4px;letter-spacing:1px;padding:1px 3px;border:1px solid;display:inline-block;margin-bottom:3px}
+.ae-title{font-size:6px;line-height:1.6;margin-bottom:2px}
+.ae-meta{font-size:5px;color:var(--dim);line-height:1.8}
+#tt{position:absolute;background:var(--bg2);border:2px solid #2a4460;padding:4px 7px;font-size:6px;color:var(--txt);pointer-events:none;display:none;z-index:15;line-height:1.5;max-width:160px}
+#ft{background:var(--bg2);border-top:3px solid var(--bdr);padding:4px 8px;display:flex;gap:3px;align-items:center;overflow-x:auto;flex-shrink:0;height:34px}
+.fb{padding:2px 5px;border:1px solid;background:transparent;cursor:pointer;font-family:inherit;font-size:5px;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.fb.on{background:rgba(255,255,255,.1)}
+.fb:hover{background:rgba(255,255,255,.05)}
+.fsp{color:var(--bdr);font-size:8px;flex-shrink:0}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#040a12}
+::-webkit-scrollbar-thumb{background:var(--bdr)}
+</style>
+</head>
+<body>
+<a href="../" style="position:fixed;top:4px;left:4px;z-index:99;font-family:Silkscreen,monospace;font-size:6px;color:#ffe8a0;text-decoration:none;padding:2px 6px;border:1px solid #1a2e48;background:rgba(6,14,24,.9);letter-spacing:1px">◀ CITYSCOPE</a>
+<div id="hd">
+  <h1>◈ BENGALURU.EXE</h1>
+  <span class="sb" style="color:#a78bfa;border-color:#a78bfa44">LUMA</span>
+  <span class="sb" style="color:#fbbf24;border-color:#fbbf2444">PUTTINGSCENE</span>
+  <span class="sb" style="color:#34d399;border-color:#34d39944">3RDPLACE</span>
+  <span class="sb" style="color:#f97316;border-color:#f9731644">ALLEVENTS</span>
+  <span class="sb" style="color:#ef4444;border-color:#ef444444">DISTRICT</span>
+  <div id="hd-r">
+    <span id="ev-ct"></span>
+    <button class="mb" onclick="toggleAll()">📋 ALL EVENTS</button>
+    <button class="mb" id="db" onclick="togD()">☀ DAY</button>
+    <button class="mb" id="rb" onclick="togR()">☂ RAIN</button>
+    <button class="mb" onclick="resetView()">⌂ RESET</button>
+    <span id="ck">—</span>
+  </div>
+</div>
+<div id="main">
+  <div id="map-area">
+    <canvas id="map"></canvas>
+    <div id="tt"></div>
+    <div id="minimap"><canvas id="mm"></canvas><div id="mini-vp"></div></div>
+    <div id="zoom-info"></div>
+  </div>
+  <div id="rpanel" class="closed">
+    <div id="street-view"><canvas id="sv" width="400" height="200"></canvas><div id="sv-label"></div><div id="sv-coords"></div></div>
+    <div id="rpanel-content"></div>
+  </div>
+  <div id="all-events"><button id="ae-close" onclick="toggleAll()">✕</button><div id="ae-header"></div><div id="ae-grid"></div></div>
+</div>
+<div id="ft">
+  <button class="fb on" style="border-color:#ffe8a0;color:#ffe8a0" onclick="sF('all',this)">ALL</button>
+  <span class="fsp">│</span>
+  <button class="fb" style="border-color:#a78bfa;color:#a78bfa" onclick="sF('luma',this)">LUMA</button>
+  <button class="fb" style="border-color:#fbbf24;color:#fbbf24" onclick="sF('scene',this)">PUTTINGSCENE</button>
+  <button class="fb" style="border-color:#34d399;color:#34d399" onclick="sF('3p',this)">3RDPLACE</button>
+  <button class="fb" style="border-color:#f97316;color:#f97316" onclick="sF('allevents',this)">ALLEVENTS</button>
+  <button class="fb" style="border-color:#ef4444;color:#ef4444" onclick="sF('district',this)">DISTRICT</button>
+  <span class="fsp">│</span>
+  <button class="fb" style="border-color:#00bcd4;color:#00bcd4" onclick="sF('tech',this)">TECH</button>
+  <button class="fb" style="border-color:#ffd700;color:#ffd700" onclick="sF('food',this)">FOOD</button>
+  <button class="fb" style="border-color:#e879f9;color:#e879f9" onclick="sF('social',this)">SOCIAL</button>
+  <button class="fb" style="border-color:#ff69b4;color:#ff69b4" onclick="sF('music',this)">MUSIC</button>
+  <button class="fb" style="border-color:#4ade80;color:#4ade80" onclick="sF('wellness',this)">WELLNESS</button>
+  <button class="fb" style="border-color:#c678dd;color:#c678dd" onclick="sF('art',this)">ART</button>
+  <button class="fb" style="border-color:#78ffd6;color:#78ffd6" onclick="sF('virtual',this)">VIRTUAL</button>
+</div>
+<script>
+// ═══ CONFIG ═══
+const TS=16,CO=56,RO=36;
+let nit=false,flt='all',fr=0,sel=null,tM=9*60,rain=false;
+let zoom=1,panX=0,panY=0,dragging=false,dragStartX=0,dragStartY=0;
+const T={G:0,R:1,B:2,P:3,W:4,M:5,V:6};
+const CC={tech:'#00bcd4',food:'#ffd700',social:'#e879f9',wellness:'#4ade80',art:'#c678dd',music:'#ff69b4',popup:'#ff9f43',virtual:'#78ffd6'};
+const SC={luma:'#a78bfa',scene:'#fbbf24','3p':'#34d399',allevents:'#f97316',district:'#ef4444'};
+const SN={luma:'LUMA',scene:'PUTTINGSCENE','3p':'YOURTHIRDPLACE',allevents:'ALLEVENTS',district:'DISTRICT'};
+
+// ═══ REAL BANGALORE COORDINATES → TILE MAPPING ═══
+const BLR={n:13.08,s:12.86,w:77.50,e:77.78};
+function geo2tile(lat,lng){
+  return{
+    c:Math.round((lng-BLR.w)/(BLR.e-BLR.w)*(CO-6)),
+    r:Math.round((BLR.n-lat)/(BLR.n-BLR.s)*(RO-4))+1
+  };
+}
+
+// ═══ MAP GENERATION ═══
+function H(r,c){return(r*73856093^c*19349663)&0x7FFFFFFF}
+function mk(){
+  const m=Array.from({length:RO},()=>Array(CO).fill(T.B));
+  [3,4,9,10,16,21,22,27,28,33].forEach(r=>{for(let c=0;c<CO;c++)m[r][c]=T.R});
+  [6,7,12,13,19,20,26,27,33,34,40,41,48,49].forEach(c=>{for(let r=0;r<RO;r++)m[r][c]=T.R});
+  for(let r=11;r<=15;r++)for(let c=8;c<=18;c++)m[r][c]=T.P;
+  for(let r=4;r<=8;r++)for(let c=28;c<=34;c++)m[r][c]=T.W;
+  for(let r=23;r<=27;r++)for(let c=8;c<=13;c++)m[r][c]=T.P;
+  for(let r=28;r<=31;r++)for(let c=34;c<=39;c++)m[r][c]=T.W;
+  for(let r=4;r<=7;r++)for(let c=36;c<=39;c++)m[r][c]=T.P;
+  for(let r=17;r<=20;r++)for(let c=14;c<=25;c++)m[r][c]=T.M;
+  for(let r=21;r<=24;r++)for(let c=28;c<=33;c++)m[r][c]=T.M;
+  for(let r=23;r<=26;r++)for(let c=21;c<=26;c++)m[r][c]=T.M;
+  for(let r=0;r<RO;r++)for(let c=50;c<CO;c++)m[r][c]=T.V;
+  for(let r=0;r<=2;r++)for(let c=0;c<=5;c++)m[r][c]=T.G;
+  for(let r=29;r<=31;r++)for(let c=14;c<=18;c++)m[r][c]=T.G;
+  return m;
+}
+const MAP=mk();
+function getZone(r,c){if(c>=42)return 2;if(c>=28&&r<=15)return 2;if(r<=8&&c<28)return 4;if(r>=23)return 3;if(c<=13&&r>=11)return 0;return 1}
+function getTreeType(r,c){if(r>=11&&r<=15&&c>=8&&c<=18)return H(r,c)%3===0?'banyan':'gulmohar';if(r>=23&&r<=27&&c>=8&&c<=13)return H(r,c)%2===0?'gulmohar':'palm';if(r>=4&&r<=7&&c>=36&&c<=39)return'palm';return['banyan','palm','gulmohar'][H(r,c)%3]}
+const FLYOVER=new Set();
+for(let c=21;c<=26;c++){FLYOVER.add(`22,${c}`);FLYOVER.add(`21,${c}`);}
+for(let c=8;c<=14;c++){FLYOVER.add(`3,${c}`);FLYOVER.add(`4,${c}`);}
+
+// ═══ PALETTES ═══
+const BPAL_D=[['#c46838','#b45828','#d47848','#a84818'],['#c87850','#d08868','#b86840','#dda080'],['#6888a0','#7898b0','#5878a0','#88a8c0'],['#d0a878','#c89868','#e0b888','#b88858'],['#d8c0a0','#c8b090','#e0c8a8','#d0b898']];
+const BPAL_N=[['#2a1408','#321808','#1e0c04'],['#2e1c0c','#381e10','#241408'],['#141e28','#1a2430','#101820'],['#221808','#2a1c0c','#1c1204'],['#2a2418','#2e2820','#242010']];
+const RPAL_D=[['#8b3a1a','#7a2a10'],['#5a8a3a','#3a5a8a','#8a5a3a'],['#4a6a80','#3a5a70'],['#8a6a4a','#7a5a3a'],['#6a8a5a','#5a7a4a']];
+const RPAL_N=[['#2a0e08','#1e0804'],['#142808','#0e1828'],['#0e1620','#0a1218'],['#201008','#180a04'],['#142010','#0e1808']];
+const PD={0:['#7ec850','#8dd460','#6db840'],1:['#c8a87a','#bfa070','#d4b688'],3:['#2e7020','#3d8a28','#4a9e30'],4:['#4090d0','#50a0e0','#3880c0'],5:['#c89820','#d4a830','#e8bc40'],6:['#060f1a','#071018']};
+const PN={0:['#1a3210','#1e3812'],1:['#362a18','#3e3020'],3:['#0a2006','#0e2808'],4:['#041830','#061e3a'],5:['#302000','#3a2604'],6:['#020508','#030609']};
+function tCol(r,c,t){if(t===T.B){const z=getZone(r,c);return(nit?BPAL_N:BPAL_D)[z][H(r,c)%(nit?BPAL_N:BPAL_D)[z].length]}return((nit?PN:PD)[t]||['#888'])[H(r,c)%((nit?PN:PD)[t]||['#888']).length]}
+
+// ═══ VENUES (real coordinates + all sources) ═══
+const V=[
+  // LUMA
+  {id:1,...geo2tile(12.976,77.592),nm:"Cubbon Park\nMetro Entrance D",cat:'wellness',src:'luma',lat:12.976,lng:77.592,vibe:'"Fresh air!" — Hoodmaps',ev:[
+    {t:"Sunrise Run",by:"Namma Circles",d:"Sundays · 6am",p:"Free",a:80,c:100,tg:['run','wellness'],lk:"luma.com/wsso5e3k",s:'o'},
+    {t:"MAP Museum — Free Tuesdays",by:"Museum of Art & Photography",d:"Tue 2–6:30pm",p:"Free",tg:['art','museum'],s:'o'},
+  ]},
+  {id:2,...geo2tile(12.935,77.615),nm:"Koramangala 7th Block",cat:'tech',src:'luma',lat:12.935,lng:77.615,vibe:'"Startup central" — Hoodmaps',ev:[
+    {t:"CCCL BLR — Vibe to Viable with Claude (Day 1 & 2)",by:"Vikram Pawar",d:"Upcoming",p:"Check Luma",tg:['AI','Claude'],lk:"luma.com/cccl.blr2a",s:'o'},
+    {t:"strkBTC Live: Bengaluru Launch",by:"Starknet Foundation",d:"Upcoming",p:"Free",tg:['crypto','web3'],lk:"luma.com/strkBTC-BLR",s:'o'},
+  ]},
+  {id:3,...geo2tile(12.956,77.700),nm:"Marathahalli",cat:'social',src:'luma',lat:12.956,lng:77.700,ev:[
+    {t:"TSOW HR Meetup",by:"Shape of Work · Springworks",d:"Upcoming",p:"Free",a:283,c:300,tg:['HR','meetup'],lk:"luma.com/qru2of9m",s:'o'},
+  ]},
+  {id:4,...geo2tile(12.926,77.680),nm:"Bellandur · Paytm",cat:'tech',src:'luma',lat:12.926,lng:77.680,vibe:'"IT crowd" — Hoodmaps',ev:[
+    {t:"Shipping Saturday: Vibe Coding Buildathon",by:"Harkirat Singh",d:"Saturdays",p:"SOLD OUT",a:28,c:28,tg:['buildathon'],lk:"luma.com/b9iofw33",s:'x'},
+  ]},
+  {id:5,...geo2tile(12.940,77.650),nm:"South Park Commons India",cat:'tech',src:'luma',lat:12.940,lng:77.650,ev:[
+    {t:"-1 to Razorpay (Harshil Mathur)",by:"SPC",d:"Upcoming",p:"Check Luma",tg:['startup','founder'],lk:"luma.com/pzluukqg",s:'o'},
+    {t:"Women in Biotech Dinner",by:"Nucleate",d:"Upcoming",p:"Check Luma",tg:['biotech','women'],s:'o'},
+  ]},
+  {id:6,...geo2tile(12.934,77.600),nm:"Samarthanam Auditorium",cat:'tech',src:'luma',lat:12.934,lng:77.600,ev:[
+    {t:"Agentic AI Unplugged",by:"Kunal Das & ClickHouse",d:"Upcoming",p:"Check Luma",tg:['agentic-AI'],lk:"luma.com/AgenticAI-BLR2026",s:'o'},
+    {t:"The Curator: Design #1",by:"RB Bharath",d:"Upcoming",p:"Check Luma",a:72,c:100,tg:['design'],s:'o'},
+  ]},
+  {id:7,...geo2tile(13.040,77.550),nm:"Haridevpur / 7th Sector",cat:'tech',src:'luma',lat:13.040,lng:77.550,ev:[
+    {t:"CyberSwaraj: Digital Privacy",by:"Bitshala",d:"Upcoming",p:"Free",a:238,c:250,tg:['privacy','crypto'],lk:"luma.com/t5vv28rj",s:'o'},
+    {t:"Diagram Chasing Datajam",by:"Diagram Chasing",d:"SOLD OUT",p:"SOLD OUT",tg:['data'],s:'x'},
+  ]},
+  {id:8,...geo2tile(13.020,77.570),nm:"BrightNodes Pvt Ltd",cat:'tech',src:'luma',lat:13.020,lng:77.570,ev:[
+    {t:"Hardware Guild: Build Macro Pad",by:"PCB Cupid",d:"Upcoming",p:"Waitlist",a:45,c:50,tg:['hardware','maker'],lk:"luma.com/t77yvole",s:'w'},
+  ]},
+  {id:9,...geo2tile(12.978,77.598),nm:"Bangalore Intl Centre",cat:'art',src:'luma',lat:12.978,lng:77.598,vibe:'"Fifth avenue" — Hoodmaps',ev:[
+    {t:"FoundrPwr — Robots & Math",by:"Narendran S",d:"Upcoming",p:"Check Luma",a:80,tg:['founder'],lk:"luma.com/shyixpuc",s:'o'},
+    {t:"Dead Write by BLR Lit Fest",by:"BLR Lit Fest",d:"23–24 May",p:"Check Luma",tg:['literary'],s:'o'},
+  ]},
+  {id:10,...geo2tile(12.960,77.595),nm:"Ashok Nagar",cat:'social',src:'luma',lat:12.960,lng:77.595,ev:[
+    {t:"Proof of 'Za 🍕 Crypto Pizza",by:"Bitget",d:"Upcoming",p:"Free",a:79,tg:['crypto','pizza'],lk:"luma.com/qut2zrht",s:'o'},
+  ]},
+  {id:11,...geo2tile(12.968,77.750),nm:"Whitefield Tech Park",cat:'tech',src:'luma',lat:12.968,lng:77.750,ev:[
+    {t:"Generative AI Meetup",by:"Community",d:"Monthly",p:"Free",tg:['GenAI'],s:'o'},
+    {t:"Consumer AI Buildathon",by:"Elevation Capital",d:"Upcoming",p:"Check Luma",tg:['AI','buildathon'],s:'o'},
+  ]},
+  {id:12,...geo2tile(12.990,77.590),nm:"Central BLR Design Hub",cat:'art',src:'luma',lat:12.990,lng:77.590,ev:[
+    {t:"Friends of Figma Bangalore",by:"FoF",d:"Upcoming",p:"Free",tg:['design','Figma'],s:'o'},
+    {t:"Design Dialogue BLR",by:"Community",d:"Upcoming",p:"₹1,200",tg:['design'],s:'o'},
+    {t:"BLR GTM Vol. I",by:"Vrushank",d:"SOLD OUT",p:"SOLD OUT",tg:['GTM'],s:'x'},
+    {t:"1 Day Modeling Masterclass",by:"Model Mentor",d:"Upcoming",p:"Check Luma",a:85,tg:['modeling'],s:'o'},
+  ]},
+  // PUTTING SCENE
+  {id:13,...geo2tile(12.972,77.600),nm:"Putting Scene × MG Road\n12 RWI Restaurants",cat:'food',src:'scene',lat:12.972,lng:77.600,ev:[
+    {t:"Comal — Latin American (9 left!)",by:"PS × RWI",d:"Prix-fixe",p:"Set price",tg:['latin','exclusive'],s:'o'},
+    {t:"Bar Sama · Muro — Thai",by:"PS × RWI",d:"Peak slots",p:"Set price",tg:['thai'],s:'o'},
+    {t:"Tijouri · Middle Room (2 left!)",by:"PS × RWI",d:"Peak slots",p:"Set price",tg:['fusion'],s:'o'},
+    {t:"Olive Beach · The Hood · Lupa",by:"PS × RWI",d:"Full week",p:"Set price",tg:['european'],s:'o'},
+  ]},
+  {id:14,...geo2tile(12.972,77.640),nm:"PS × Indiranagar",cat:'food',src:'scene',lat:12.972,lng:77.640,vibe:'"Hipster cafes" — Hoodmaps',ev:[
+    {t:"Kopitiam Lah — Pan-Asian",by:"PS × RWI",d:"Lunch/Dinner",p:"Set price",tg:['pan-asian'],s:'o'},
+    {t:"Woodside Inn — European",by:"PS × RWI",d:"Lunch/Dinner",p:"Set price",tg:['european'],s:'o'},
+  ]},
+  {id:15,...geo2tile(12.935,77.610),nm:"PS × Koramangala",cat:'food',src:'scene',lat:12.935,lng:77.610,ev:[
+    {t:"Kappa Chakka Kandhari — Kerala",by:"PS × RWI",d:"Lunch/Dinner",p:"Set price",tg:['Kerala'],s:'o'},
+  ]},
+  {id:16,...geo2tile(13.020,77.600),nm:"PS × North BLR",cat:'food',src:'scene',lat:13.020,lng:77.600,ev:[
+    {t:"Fireside: Flame Craft — Grill",by:"PS × RWI",d:"Lunch/Dinner",p:"Set price",tg:['grill'],s:'o'},
+    {t:"Restaurant Fervor — European",by:"PS × RWI",d:"Lunch/Dinner",p:"Set price",tg:['european'],s:'o'},
+  ]},
+  {id:17,...geo2tile(12.970,77.640),nm:"Putting Scene\nAccess Pass",cat:'food',src:'scene',lat:12.970,lng:77.640,ev:[
+    {t:"Naru Secret Menu (Mon 7pm!)",by:"PS",d:"Members Only",p:"Access Pass",tg:['secret-menu'],s:'o'},
+    {t:"Sound Ceremony",by:"PS",d:"Thursdays",p:"Access Pass",tg:['sound'],s:'o'},
+    {t:"Restaurant Preview Nights",by:"PS",d:"2–3×/week",p:"Access Pass",tg:['preview'],s:'o'},
+  ]},
+  // YOUR THIRD PLACE
+  {id:18,...geo2tile(12.975,77.595),nm:"Your Third Place\nCurated IRL",cat:'social',src:'3p',lat:12.975,lng:77.595,ev:[
+    {t:"Pitch and Pair",by:"YTP",d:"Weekly",p:"Check site",tg:['social','startup'],s:'o'},
+    {t:"Listening Room",by:"YTP",d:"Weekly",p:"Check site",tg:['music','intimate'],s:'o'},
+    {t:"Secret Supper & Stories",by:"YTP",d:"Weekly",p:"Check site",tg:['food'],s:'o'},
+    {t:"Sunset Walk by the Lake",by:"YTP",d:"Weekends",p:"Check site",tg:['outdoor'],s:'o'},
+    {t:"Secret Picnic Meet-Cute",by:"YTP",d:"Weekends",p:"Check site",tg:['romance'],s:'o'},
+  ]},
+  // ALLEVENTS
+  {id:19,...geo2tile(12.968,77.740),nm:"Phoenix Market City",cat:'music',src:'allevents',lat:12.968,lng:77.740,ev:[
+    {t:"Kumar Sanu Live",by:"Concert",d:"9 May · 6:30pm",p:"Ticketed",tg:['Bollywood'],s:'o'},
+    {t:"Shaan Rahman Live",by:"Concert",d:"16 May · 7pm",p:"Ticketed",tg:['music'],s:'o'},
+  ]},
+  {id:20,...geo2tile(12.910,77.640),nm:"HSR Layout / Freedom Park",cat:'social',src:'allevents',lat:12.910,lng:77.640,vibe:'"Board gamers" — Hoodmaps',ev:[
+    {t:"NIRVANA LAND — Bhajan Clubbing",by:"Freedom Park",d:"9 May · 7pm",p:"Ticketed",tg:['spiritual'],s:'o'},
+    {t:"Board Games Meetup",by:"HSRMEETUPS",d:"Fridays 7:15pm",p:"Free",tg:['games'],s:'o'},
+    {t:"Freedom BLR Half Marathon",by:"NICE Road",d:"24 May · 6am",p:"Registration",tg:['marathon'],s:'o'},
+  ]},
+  {id:21,...geo2tile(12.952,77.580),nm:"Lalbagh / Jayanagar",cat:'art',src:'allevents',lat:12.952,lng:77.580,vibe:'"Garden city!" — Hoodmaps',ev:[
+    {t:"Bengaluru Utsava — Arts & Crafts",by:"Chitrakala Parishath",d:"Ongoing",p:"Varies",tg:['art'],s:'o'},
+    {t:"Pottery & Neon Painting",by:"Various",d:"Weekends",p:"₹500–800",tg:['workshop'],s:'o'},
+  ]},
+  {id:22,...geo2tile(12.968,77.750),nm:"MLR Whitefield",cat:'music',src:'allevents',lat:12.968,lng:77.750,ev:[
+    {t:"Rahul Dua — Allow Me! Comedy",by:"Standup",d:"10 May · 4pm",p:"Ticketed",tg:['comedy'],s:'o'},
+  ]},
+  {id:23,...geo2tile(12.985,77.590),nm:"Vasanth Nagar",cat:'social',src:'allevents',lat:12.985,lng:77.590,vibe:'"Nice sexy houses" — Hoodmaps',ev:[
+    {t:"Bangalore Tech Mixer",by:"Eventbrite",d:"Monthly",p:"Free",tg:['networking'],s:'o'},
+    {t:"Founders Running Club",by:"Eventbrite",d:"Weekly",p:"Free",tg:['running'],s:'o'},
+  ]},
+  {id:24,...geo2tile(13.040,77.600),nm:"Manyata Tech / Hebbal",cat:'tech',src:'allevents',lat:13.040,lng:77.600,ev:[
+    {t:"bharatAI — India's AI Conference",by:"KTPO",d:"13 May · 10am",p:"Ticketed",tg:['AI'],s:'o'},
+    {t:"The Messi Experience",by:"Bhartiya Mall",d:"27 Jun",p:"Ticketed",tg:['sports'],s:'o'},
+  ]},
+  // DISTRICT (Zomato)
+  {id:25,...geo2tile(12.968,77.740),nm:"District × Phoenix Marketcity",cat:'music',src:'district',lat:12.968,lng:77.740,ev:[
+    {t:"Shankar-Ehsaan-Loy: Raag-On Tour",by:"District",d:"Sat 23 May · 7pm",p:"₹1,400+",tg:['Bollywood','live'],s:'o'},
+    {t:"elrow India 2026",by:"District",d:"23 May · 1:30pm",p:"Ticketed",tg:['festival','EDM'],s:'o'},
+    {t:"Sunidhi Chauhan — I Am Home",by:"District",d:"Upcoming",p:"Ticketed",tg:['Bollywood'],s:'o'},
+  ]},
+  {id:26,...geo2tile(13.060,77.580),nm:"District Arena @ Terraform",cat:'music',src:'district',lat:13.060,lng:77.580,ev:[
+    {t:"Gorillaz in Bengaluru",by:"District",d:"23 Jan 2027",p:"₹2,000+",a:1300,tg:['international'],s:'o'},
+    {t:"Mochakk India Tour",by:"District",d:"10 May · 12:30pm",p:"₹2,000+",tg:['house'],s:'o'},
+  ]},
+  {id:27,...geo2tile(12.998,77.595),nm:"Bangalore Palace",cat:'music',src:'district',lat:12.998,lng:77.595,ev:[
+    {t:"Calvin Harris — Live in Bengaluru",by:"District",d:"Upcoming 2026",p:"TBA",tg:['EDM','international'],s:'o'},
+    {t:"Sitar for Mental Health",by:"Rishab Sharma",d:"Upcoming",p:"Ticketed",tg:['sitar','classical'],s:'o'},
+  ]},
+  // VIRTUAL
+  {id:28,c:52,r:10,nm:"▸ VIRTUAL\nOnline Events",cat:'virtual',src:'luma',ev:[
+    {t:"Generative AI BLR — Online",by:"Community",d:"Recurring",p:"Free",tg:['AI'],s:'o'},
+    {t:"Founders Sync (Zoom)",by:"SPC India",d:"Bi-weekly",p:"Membership",tg:['startup'],s:'o'},
+    {t:"Bitshala Bitcoin Study",by:"Bitshala",d:"Sundays",p:"Free",tg:['Bitcoin'],s:'o'},
+  ]},
+  {id:29,c:52,r:24,nm:"▸ VIRTUAL\nWebinars",cat:'virtual',src:'luma',ev:[
+    {t:"TSOW HR — Future of Work",by:"Springworks",d:"Monthly",p:"Free",tg:['HR'],s:'o'},
+  ]},
+];
+
+const totalEv=V.reduce((s,v)=>s+v.ev.length,0);
+document.getElementById('ev-ct').textContent=`${totalEv} EVENTS · ${V.length} VENUES`;
+
+// ═══ CANVAS + ZOOM/PAN ═══
+const cv=document.getElementById('map'),cx=cv.getContext('2d');
+cv.width=CO*TS;cv.height=RO*TS;
+const mmCv=document.getElementById('mm'),mmCx=mmCv.getContext('2d');
+mmCv.width=CO;mmCv.height=RO;
+const svCv=document.getElementById('sv'),svCx=svCv.getContext('2d');
+
+function applyTransform(){
+  cv.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`;
+  document.getElementById('zoom-info').textContent=`${Math.round(zoom*100)}% · ${V.length} venues`;
+}
+
+const mapArea=document.getElementById('map-area');
+mapArea.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const rect=mapArea.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  const oldZ=zoom;
+  zoom=Math.max(0.5,Math.min(4,zoom*(e.deltaY<0?1.15:0.87)));
+  panX=mx-(mx-panX)*(zoom/oldZ);
+  panY=my-(my-panY)*(zoom/oldZ);
+  applyTransform();
+},{passive:false});
+
+mapArea.addEventListener('mousedown',e=>{if(e.button===0){dragging=true;dragStartX=e.clientX-panX;dragStartY=e.clientY-panY;e.preventDefault()}});
+window.addEventListener('mousemove',e=>{if(dragging){panX=e.clientX-dragStartX;panY=e.clientY-dragStartY;applyTransform()}});
+window.addEventListener('mouseup',()=>{dragging=false});
+
+function panTo(tx,ty){
+  const rect=mapArea.getBoundingClientRect();
+  const targetZ=2;
+  zoom=targetZ;
+  panX=rect.width/2-tx*zoom;
+  panY=rect.height/2-ty*zoom;
+  applyTransform();
+}
+
+function resetView(){zoom=1;panX=0;panY=0;applyTransform()}
+
+// ═══ TILE DRAWING ═══
+function drawTile(r,c,t){
+  const x=c*TS,y=r*TS,z=getZone(r,c);
+  cx.fillStyle=tCol(r,c,t);cx.fillRect(x,y,TS,TS);
+
+  if(t===T.B){
+    const roofs=(nit?RPAL_N:RPAL_D)[z];
+    cx.fillStyle=roofs[H(r,c)%roofs.length];cx.fillRect(x+1,y+1,TS-2,4);
+    if(z===2){
+      cx.fillStyle=nit?'rgba(100,180,255,.5)':'rgba(160,210,255,.5)';
+      cx.fillRect(x+2,y+6,5,3);cx.fillRect(x+9,y+6,5,3);cx.fillRect(x+2,y+10,5,3);cx.fillRect(x+9,y+10,5,3);
+      if(H(r,c)%4===0){cx.fillStyle=nit?'#2a3a4a':'#8898a8';cx.fillRect(x+12,y,2,4)}
+    }else if(z===0){
+      const wn=i=>nit?((H(r*11,c*17+i)%7>2)?'rgba(255,190,50,.8)':'rgba(8,8,4,.85)'):'rgba(255,240,200,.3)';
+      cx.fillStyle=wn(0);cx.fillRect(x+2,y+7,2,2);cx.fillStyle=wn(1);cx.fillRect(x+7,y+7,2,2);cx.fillStyle=wn(2);cx.fillRect(x+12,y+7,2,2);
+      cx.fillStyle=nit?'#1a0c04':'#5a2a10';cx.fillRect(x+6,y+11,4,5);
+    }else{
+      const wn=i=>nit?((H(r*13,c*19+i)%8>2)?'rgba(255,210,70,.95)':'rgba(6,10,20,.9)'):'rgba(200,230,255,.35)';
+      cx.fillStyle=wn(0);cx.fillRect(x+2,y+6,3,3);cx.fillStyle=wn(1);cx.fillRect(x+9,y+6,3,3);
+      cx.fillStyle=wn(2);cx.fillRect(x+2,y+11,3,3);cx.fillStyle=wn(3);cx.fillRect(x+9,y+11,3,3);
+      cx.fillStyle=nit?'#1a1008':'#6a3a28';cx.fillRect(x+6,y+11,4,5);
+    }
+    if(H(r,c+2)%5===0){cx.fillStyle=nit?'#1a1a1a':'#888';cx.fillRect(x+2,y-1,4,3)}
+    if(z===3&&H(r,c+3)%6===0&&!nit){cx.fillStyle='rgba(60,40,20,.25)';cx.fillRect(x,y-1,TS,1);cx.fillStyle='#cc6666';cx.fillRect(x+3,y-1,2,2);cx.fillStyle='#6666cc';cx.fillRect(x+8,y-1,2,2)}
+  }
+
+  if(t===T.P){
+    const tt=getTreeType(r,c);
+    if(tt==='banyan'&&H(r,c)%3===0){
+      cx.fillStyle=nit?'#1a1008':'#5a3818';cx.fillRect(x+7,y+8,2,8);
+      cx.fillStyle=nit?'#120c04':'#7a5030';cx.fillRect(x+3,y+6,1,5);cx.fillRect(x+12,y+5,1,6);
+      cx.fillStyle=nit?'#0a2206':'#1a5a10';cx.fillRect(x-1,y+1,TS+2,8);
+      cx.fillStyle=nit?'#0c2a08':'#2a7018';cx.fillRect(x+1,y+0,TS-2,6);
+      cx.fillStyle=nit?'#0e3010':'#3a8028';cx.fillRect(x+3,y-1,10,4);
+    }else if(tt==='palm'&&H(r,c)%3!==2){
+      cx.fillStyle=nit?'#1a1408':'#8a6830';cx.fillRect(x+7,y+4,2,12);
+      cx.fillStyle=nit?'#0c2a08':'#2a8018';cx.fillRect(x+2,y+1,5,3);cx.fillRect(x+9,y+1,5,3);
+      cx.fillStyle=nit?'#0e3410':'#3a9028';cx.fillRect(x+5,y+0,6,3);
+    }else if(tt==='gulmohar'&&H(r,c)%3!==1){
+      cx.fillStyle=nit?'#1a1008':'#6a4020';cx.fillRect(x+7,y+10,2,6);
+      cx.fillStyle=nit?'#0a2006':'#2a6818';cx.fillRect(x+3,y+3,10,8);
+      cx.fillStyle=nit?'#3a1008':'#e04820';cx.fillRect(x+4,y+2,3,3);cx.fillRect(x+9,y+2,3,3);
+      cx.fillStyle=nit?'#4a1810':'#ff6830';cx.fillRect(x+6,y+1,4,2);
+    }else{cx.fillStyle=nit?'#0a2408':'#2a6018';cx.fillRect(x+2,y+8,5,5);cx.fillRect(x+3,y+6,3,3)}
+    if((r+c)%5===0){cx.fillStyle=nit?'#182a10':'#b0a070';cx.fillRect(x,y+14,TS,2)}
+  }
+
+  if(t===T.W){
+    if((c+Math.floor(fr/12))%5<2){cx.fillStyle=nit?'#041830':'#3070b0';cx.fillRect(x+1,y+5,TS-2,2);cx.fillRect(x+4,y+11,TS-8,2)}
+    if(fr%20<10&&H(r,c)%4===0){cx.fillStyle=nit?'rgba(60,120,200,.25)':'rgba(200,240,255,.45)';cx.fillRect(x+H(r,c)%10,y+H(r+1,c)%10,3,1)}
+    if(H(r*3,c*7)%12===0){cx.fillStyle=nit?'#0a3008':'#3a9028';cx.fillRect(x+4,y+6,4,3);cx.fillStyle=nit?'#3a1028':'#ff6688';cx.fillRect(x+5,y+5,2,2)}
+  }
+
+  if(t===T.M){
+    const awC=nit?['#280800','#0a1020','#200a00']:['#e06020','#2080d0','#d04010','#20a060'];
+    cx.fillStyle=awC[H(r,c)%awC.length];cx.fillRect(x,y,TS,5);
+    cx.fillStyle=nit?'rgba(60,40,20,.6)':'rgba(255,255,255,.45)';
+    for(let s=1;s<TS;s+=4)cx.fillRect(x+s,y+1,2,3);
+    cx.fillStyle=nit?'rgba(255,200,60,.6)':'rgba(180,220,255,.4)';cx.fillRect(x+2,y+6,TS-4,4);
+    if(nit&&H(r,c)%4===0){cx.fillStyle=['rgba(255,60,120,.4)','rgba(60,200,255,.4)','rgba(255,200,60,.4)'][H(r,c)%3];cx.fillRect(x+3,y-1,10,2)}
+    if(H(r,c)%8===0&&!nit){cx.fillStyle='#fff';cx.fillRect(x+1,y-2,TS-2,3);cx.fillStyle='#cc2200';cx.fillRect(x+3,y-1,2,1);cx.fillRect(x+6,y-1,2,1);cx.fillRect(x+9,y-1,2,1)}
+  }
+
+  if(t===T.R){
+    const isF=FLYOVER.has(`${r},${c}`);
+    if(isF){cx.fillStyle=nit?'rgba(0,0,0,.3)':'rgba(0,0,0,.12)';cx.fillRect(x,y+TS-3,TS,3);cx.fillStyle=nit?'#2a2618':'#a89870';cx.fillRect(x,y,TS,TS-3);cx.fillStyle=nit?'#3a3a3a':'#999';cx.fillRect(x,y,TS,1);cx.fillRect(x,y+TS-4,TS,1)}
+    else if((c+Math.floor(fr/18))%4===0){cx.fillStyle=nit?'rgba(255,220,60,.12)':'rgba(255,255,200,.22)';cx.fillRect(x+6,y+7,4,2)}
+    if(H(r,c)%16===0&&!isF){
+      const px=x+((fr*2+H(r,c)*3)%TS),py=y+3+H(r,c)%7;
+      cx.fillStyle=nit?'rgba(255,200,150,.5)':['#ffccaa','#c89060','#ffd8b0'][H(r,c)%3];
+      cx.fillRect(px,py,2,2);cx.fillStyle='#2a1a0a';cx.fillRect(px,py-1,2,1);
+      cx.fillStyle=nit?'rgba(100,140,200,.5)':['#4488cc','#cc4488','#88cc44','#dd8844'][H(r,c)%4];
+      cx.fillRect(px,py+2,2,3);
+      cx.fillStyle=nit?'rgba(40,30,20,.4)':'#4a3a2a';
+      if(fr%8<4){cx.fillRect(px,py+5,1,2)}else{cx.fillRect(px+1,py+5,1,2)}
+    }
+    if([3,9,16,21,27,33].includes(r)&&H(r,c)%12===0&&!isF){
+      const carX=x+(fr+H(r,c)*5)%(TS*2);
+      if(carX>=x&&carX<x+TS-6){cx.fillStyle=nit?['#3a2020','#203a20'][H(r,c)%2]:['#dd3333','#3366dd','#33aa33','#dddd33'][H(r,c)%4];cx.fillRect(carX,y+3,6,3);cx.fillStyle=nit?'rgba(255,255,200,.4)':'rgba(200,230,255,.5)';cx.fillRect(carX+1,y+4,1,1);cx.fillRect(carX+4,y+4,1,1)}
+    }
+  }
+
+  if(t===T.G){if(H(r,c)%5===0){cx.fillStyle=nit?'#3a2060':'#ff88cc';cx.fillRect(x+H(r,c)%12,y+H(r,c+1)%12,2,2)}if(H(r+1,c+1)%4===0){cx.fillStyle=nit?'#2a4020':'#60a040';cx.fillRect(x+3,y+5,3,6)}}
+
+  if(t===T.V){if((r+c)%2===0){cx.fillStyle='rgba(100,220,200,.02)';cx.fillRect(x,y,TS,TS)}cx.fillStyle='rgba(100,220,200,.04)';cx.fillRect(x,y,1,TS);cx.fillRect(x,y,TS,1);if(H(r,c)%6===0&&fr%40<20){cx.fillStyle='rgba(100,220,200,.6)';cx.fillRect(x+7,y+7,2,2)}}
+}
+
+// ═══ LABELS ═══
+const LB=[{t:"MALLESHWARAM",x:0,y:7,s:5},{t:"RAJAJINAGAR",x:0,y:14,s:5},{t:"HEBBAL",x:4,y:1,s:5},{t:"MANYATA TECH",x:35,y:1,s:5},{t:"WHITEFIELD",x:43,y:1,s:5},{t:"CUBBON PARK",x:9,y:11,s:6},{t:"ULSOOR LAKE",x:29,y:5,s:5},{t:"MG ROAD",x:14,y:17,s:6},{t:"INDIRANAGAR",x:28,y:20,s:5},{t:"KORAMANGALA",x:21,y:23,s:5},{t:"LALBAGH",x:8,y:24,s:6},{t:"JAYANAGAR",x:14,y:29,s:5},{t:"HSR LAYOUT",x:31,y:30,s:5},{t:"AGARA LAKE",x:34,y:29,s:5},{t:"MARATHAHALLI",x:35,y:11,s:5},{t:"BELLANDUR",x:42,y:22,s:5},{t:"▸ VIRTUAL",x:50,y:1,s:6},{t:"ELECTRONIC CITY ↓",x:28,y:34,s:5}];
+const VIBES=[{t:'"fifth avenue"',x:16,y:18,c:'#ffd700'},{t:'"hipster cafes"',x:29,y:22,c:'#e879f9'},{t:'"startup central"',x:22,y:25,c:'#00bcd4'},{t:'"nice houses"',x:10,y:18,c:'#ff9f43'},{t:'"IT crowd"',x:44,y:3,c:'#00bcd4'},{t:'"fresh air!"',x:10,y:13,c:'#4ade80'},{t:'"board gamers"',x:32,y:32,c:'#c678dd'},{t:'"chai & chaos"',x:2,y:15,c:'#ff9f43'},{t:'"traffic graveyard"',x:22,y:22,c:'#ff6b6b'}];
+function dL(){LB.forEach(l=>{cx.font=`${l.s}px 'Silkscreen',monospace`;cx.fillStyle=nit?'rgba(255,208,60,.35)':'rgba(255,250,200,.6)';cx.fillText(l.t,l.x*TS+1,l.y*TS+TS-2)});VIBES.forEach(v=>{cx.font=`italic 5px 'Courier New',monospace`;cx.fillStyle=(nit?v.c+'30':v.c+'50');cx.fillText(v.t,v.x*TS,v.y*TS+TS-1)})}
+
+// ═══ PHASE 2: RICKSHAWS, DOGS, BIRDS, RAIN ═══
+const AUTOS=[];for(let i=0;i<14;i++){AUTOS.push({r:[3,4,9,10,16,21,27][H(i,0)%7],sC:H(i,1)%CO,sp:.8+H(i,2)%3*.4,dir:H(i,3)%2?1:-1,clr:H(i,4)%3})}
+function drawAutos(){AUTOS.forEach(a=>{const px=((a.sC*TS+fr*a.sp*a.dir+CO*TS*10)%(CO*TS)),py=a.r*TS+2;if(!MAP[a.r]||MAP[a.r][Math.floor(px/TS)]!==T.R)return;cx.fillStyle=nit?'#1a1a0a':'#222';cx.fillRect(px+1,py,5,2);cx.fillStyle=a.clr===0?(nit?'#3a4a10':'#88aa20'):a.clr===1?(nit?'#0a3a10':'#20aa40'):(nit?'#2a2a00':'#ccaa00');cx.fillRect(px,py+2,7,4);cx.fillStyle=nit?'rgba(180,220,255,.4)':'rgba(180,220,255,.6)';cx.fillRect(px+(a.dir>0?5:0),py+2,2,2);cx.fillStyle=nit?'#1a1a1a':'#333';cx.fillRect(px+1,py+6,2,1);cx.fillRect(px+4,py+6,2,1);if(nit){const gl=cx.createRadialGradient(a.dir>0?px+7:px-4,py+3,0,a.dir>0?px+7:px-4,py+3,10);gl.addColorStop(0,'rgba(255,220,80,.3)');gl.addColorStop(1,'rgba(255,220,80,0)');cx.fillStyle=gl;cx.fillRect(px-10,py-7,24,20)}})}
+
+const DOGS=[];for(let i=0;i<18;i++){const dr=H(i*7,i*3)%RO,dc=H(i*3,i*7)%CO;if(dc<48)DOGS.push({r:dr,c:dc,f:H(i,i)%2})}
+function drawDogs(){DOGS.forEach(d=>{if(MAP[d.r][d.c]!==T.R&&MAP[d.r][d.c]!==T.G)return;const adj=d.r>0?MAP[d.r-1][d.c]:T.R;if(adj!==T.B)return;const x=d.c*TS+(d.f?2:6),y=d.r*TS+10;cx.fillStyle=nit?'rgba(140,100,60,.4)':'#8a6a40';cx.fillRect(x,y,5,3);cx.fillStyle=nit?'rgba(120,80,40,.4)':'#7a5a30';cx.fillRect(x+(d.f?5:-2),y-1,3,3)})}
+
+function drawBirds(){[{y:1,sp:.6,sz:5,o:0},{y:0,sp:.4,sz:4,o:200},{y:2,sp:.8,sz:3,o:400}].forEach(f=>{const bx=((fr*f.sp+f.o)%(CO*TS+200))-100;cx.fillStyle=nit?'rgba(200,200,200,.35)':'rgba(40,30,20,.45)';for(let b=0;b<f.sz;b++){const x2=bx-b*6,y2=f.y*TS+4+b*2+Math.sin(fr*.15+b)*1.5;cx.fillRect(x2-1,y2,1,1);cx.fillRect(x2,y2-1,1,1);cx.fillRect(x2+1,y2,1,1)}for(let b=1;b<f.sz;b++){const x2=bx+b*6,y2=f.y*TS+4+b*2+Math.sin(fr*.15+b)*1.5;cx.fillRect(x2-1,y2,1,1);cx.fillRect(x2,y2-1,1,1);cx.fillRect(x2+1,y2,1,1)}})}
+
+const DROPS=[];for(let i=0;i<120;i++)DROPS.push({x:Math.random()*CO*TS,y:Math.random()*RO*TS,sp:2+Math.random()*3,ln:2+Math.random()*3});
+function drawRain(){if(!rain)return;cx.fillStyle='rgba(10,15,25,.12)';cx.fillRect(0,0,cv.width,cv.height);cx.strokeStyle=nit?'rgba(100,140,200,.3)':'rgba(140,180,220,.35)';cx.lineWidth=1;DROPS.forEach(d=>{d.y+=d.sp;d.x+=.5;if(d.y>RO*TS){d.y=-10;d.x=Math.random()*CO*TS}cx.beginPath();cx.moveTo(d.x,d.y);cx.lineTo(d.x+.5,d.y+d.ln);cx.stroke()});for(let r=0;r<RO;r++)for(let c=0;c<CO;c++)if(MAP[r][c]===T.R&&H(r,c)%10===0){cx.fillStyle=nit?'rgba(60,100,160,.15)':'rgba(120,170,220,.2)';cx.fillRect(c*TS+2,r*TS+10,8,3)}}
+
+// ═══ PHASE 3: METRO, LANDMARKS, TRAFFIC ═══
+function drawMetro(){
+  cx.fillStyle=nit?'rgba(130,80,200,.5)':'rgba(130,80,200,.6)';cx.fillRect(2*TS,16*TS+7,38*TS,2);
+  const tpx=((fr*1.2)%(40*TS));cx.fillStyle=nit?'#6040a0':'#8060c0';cx.fillRect(tpx,16*TS+4,12,5);
+  cx.fillStyle=nit?'rgba(255,255,200,.5)':'rgba(255,255,200,.7)';cx.fillRect(tpx,16*TS+5,2,2);
+
+  cx.fillStyle=nit?'rgba(60,180,80,.5)':'rgba(60,180,80,.6)';cx.fillRect(12*TS+7,2*TS,2,31*TS);
+  const tgy=((fr*1.0)%(32*TS));cx.fillStyle=nit?'#208040':'#30a050';cx.fillRect(12*TS+4,tgy,5,12);
+
+  cx.fillStyle=nit?'rgba(255,200,60,.6)':'rgba(255,200,60,.8)';cx.fillRect(12*TS+3,16*TS+3,10,10);
+  cx.fillStyle=nit?'#ffe8a0':'#fff';cx.font='4px monospace';cx.fillText('M',12*TS+5,16*TS+10);
+}
+
+function drawLandmarks(){
+  // Vidhana Soudha
+  let vx=14*TS,vy=15*TS;
+  cx.fillStyle=nit?'#1a1808':'#d0c0a0';cx.fillRect(vx-2,vy+4,TS+4,12);
+  cx.fillStyle=nit?'#2a2008':'#c8a868';cx.fillRect(vx+2,vy+1,TS-4,4);cx.fillRect(vx+4,vy-1,TS-8,3);cx.fillRect(vx+6,vy-2,4,2);
+  cx.fillStyle='#ff6633';cx.fillRect(vx+7,vy-4,1,3);cx.fillStyle='#fff';cx.fillRect(vx+7,vy-3,1,1);cx.fillStyle='#138808';cx.fillRect(vx+7,vy-2,1,1);
+
+  // Bangalore Palace
+  let bx=20*TS,by=6*TS;
+  cx.fillStyle=nit?'#1a1010':'#c88080';cx.fillRect(bx+1,by+4,14,12);
+  cx.fillStyle=nit?'#2a1818':'#d09090';cx.fillRect(bx,by+2,4,6);cx.fillRect(bx+12,by+2,4,6);
+  cx.fillRect(bx,by+1,2,2);cx.fillRect(bx+2,by,2,2);cx.fillRect(bx+12,by+1,2,2);cx.fillRect(bx+14,by,2,2);
+}
+
+function drawTrafficSignals(){
+  [[16,19],[16,26],[16,33],[9,19],[22,19],[22,26],[27,12]].forEach(([r,c])=>{
+    const sx=c*TS+TS-3,sy=r*TS+1;cx.fillStyle=nit?'#1a1a1a':'#333';cx.fillRect(sx-1,sy,4,8);
+    const ph=Math.floor((fr+c*20+r*30)/60)%3;
+    cx.fillStyle=ph===0||(r===22&&c===19)?(nit?'#ff3030':'#ff2020'):(nit?'#3a0000':'#660000');cx.fillRect(sx,sy+1,2,2);
+    cx.fillStyle=ph===1&&!(r===22&&c===19)?(nit?'#ffcc00':'#ddaa00'):(nit?'#2a2000':'#554400');cx.fillRect(sx,sy+3,2,2);
+    cx.fillStyle=ph===2&&!(r===22&&c===19)?(nit?'#30ff30':'#20dd20'):(nit?'#003a00':'#005500');cx.fillRect(sx,sy+5,2,2);
+  });
+}
+
+// ═══ PHASE 5: PARTICLES ═══
+const particles=[];
+function spawnParticles(){
+  // Fireflies in parks at night
+  if(nit&&fr%8===0){
+    for(let r=11;r<=15;r+=2)for(let c=8;c<=18;c+=3){
+      if(H(r+fr,c)%20===0)particles.push({x:c*TS+H(r,c)%TS,y:r*TS+H(c,r)%TS,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,life:80+Math.random()*40,type:'firefly'});
+    }
+  }
+  // Music notes near concert venues
+  if(fr%20===0){
+    V.filter(v=>v.cat==='music'&&vis(v)).forEach(v=>{
+      if(H(fr,v.id)%4===0)particles.push({x:v.c*TS+8,y:v.r*TS-4,vx:(Math.random()-.5)*.5,vy:-0.3-Math.random()*.3,life:50,type:'note',col:CC.music});
+    });
+  }
+  // Steam from food venues
+  if(fr%12===0){
+    V.filter(v=>v.cat==='food'&&vis(v)).forEach(v=>{
+      if(H(fr,v.id)%3===0)particles.push({x:v.c*TS+6+Math.random()*4,y:v.r*TS,vx:(Math.random()-.5)*.2,vy:-0.4,life:30,type:'steam'});
+    });
+  }
+}
+
+function drawParticles(){
+  spawnParticles();
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx;p.y+=p.vy;p.life--;
+    if(p.life<=0){particles.splice(i,1);continue}
+    const a=Math.min(1,p.life/20);
+    if(p.type==='firefly'){
+      cx.fillStyle=`rgba(200,255,100,${a*.6+Math.sin(fr*.2+i)*.2})`;
+      cx.fillRect(p.x,p.y,2,2);
+    }else if(p.type==='note'){
+      cx.fillStyle=p.col+Math.round(a*99).toString(16).padStart(2,'0');
+      cx.font='6px serif';cx.fillText('♪',p.x,p.y);
+    }else if(p.type==='steam'){
+      cx.fillStyle=`rgba(200,200,200,${a*.2})`;
+      cx.fillRect(p.x,p.y,2,1);
+    }
+  }
+}
+
+// ═══ PHASE 4: AUTO-GENERATED STREET VIEW ═══
+function drawStreetView(v){
+  const w=400,h=200,col=CC[v.cat]||'#fff';
+  svCx.clearRect(0,0,w,h);
+  svCx.fillStyle=nit?'#0a1424':'#88bbdd';svCx.fillRect(0,0,w,80);
+  svCx.fillStyle=nit?'#1a1a10':'#c0a878';svCx.fillRect(0,80,w,120);
+  svCx.fillStyle=nit?'#2a2218':'#9a8868';svCx.fillRect(0,100,w,40);
+  svCx.fillStyle=nit?'rgba(255,220,60,.1)':'rgba(255,255,200,.3)';
+  for(let x=10;x<w;x+=20)svCx.fillRect(x,118,10,2);
+  svCx.fillStyle=nit?'#282818':'#d0c098';svCx.fillRect(0,80,w,20);svCx.fillRect(0,140,w,12);
+
+  // Auto-generate buildings based on venue category
+  const builds=v.ev.length+2;
+  for(let i=0;i<builds;i++){
+    const bx=i*(w/builds)+5,bw=w/builds-10,bh=30+i*8+(v.cat==='tech'?15:0);
+    svCx.fillStyle=nit?'#1a1a2a':'tCol' in window?'#6080a0':
+      v.cat==='food'?['#d08850','#50a080','#5080c0','#c0a050'][i%4]:
+      v.cat==='tech'?['#607898','#788898','#6080a0'][i%3]:
+      v.cat==='music'?['#6040a0','#a04060','#604080'][i%3]:
+      ['#c07850','#d08868','#b86840'][i%3];
+    svCx.fillRect(bx,80-bh,bw,bh);
+    // Awning/sign colored by venue
+    svCx.fillStyle=col+'88';svCx.fillRect(bx,80-bh-4,bw,4);
+    // Windows
+    for(let wy=4;wy<bh-10;wy+=10){
+      for(let wx=3;wx<bw-6;wx+=8){
+        svCx.fillStyle=nit?((H(wy,wx+i)%3>0)?'rgba(255,220,80,.7)':'rgba(10,15,30,.8)'):'rgba(180,220,255,.5)';
+        svCx.fillRect(bx+wx,80-bh+wy,5,4);
+      }
+    }
+    // Door
+    svCx.fillStyle=nit?'rgba(255,200,60,.3)':'#5a3018';
+    svCx.fillRect(bx+bw/2-4,80-10,8,10);
+  }
+
+  // Category-specific details
+  if(v.cat==='food'){
+    [60,160,280].forEach(tx=>{svCx.fillStyle=nit?'#1a1a10':'#fff8e0';svCx.fillRect(tx,148,10,4);svCx.fillStyle=nit?'#2a2a20':'#aa8860';svCx.fillRect(tx+3,152,4,6)});
+  }
+  if(v.cat==='music'){
+    svCx.fillStyle=col+'44';svCx.font='8px serif';
+    for(let n=0;n<5;n++)svCx.fillText('♪',50+n*70+Math.sin(fr*.1+n)*5,60+Math.cos(fr*.08+n)*8);
+  }
+  if(v.cat==='tech'){
+    svCx.fillStyle='#fff';for(let i=0;i<3;i++){svCx.fillRect(80+i*120,148,3,4);svCx.fillStyle='#8b4020';svCx.fillRect(80+i*120,148,3,1);svCx.fillStyle='#fff'}
+  }
+
+  // People
+  for(let p=0;p<8;p++){
+    const px=30+p*45+Math.sin(fr*.05+p)*3,py=142;
+    svCx.fillStyle=['#ffccaa','#c89060','#ffd8b0'][p%3];svCx.fillRect(px,py,3,3);
+    svCx.fillStyle=['#4488cc','#cc4488','#88cc44','#dd8844'][p%4];svCx.fillRect(px,py+3,3,5);
+  }
+
+  // Auto-rickshaw in street
+  const ax=(fr*2)%w;
+  svCx.fillStyle='#88aa20';svCx.fillRect(ax,110,10,6);svCx.fillStyle='#222';svCx.fillRect(ax+1,108,8,3);
+
+  if(nit){for(let i=0;i<12;i++){svCx.fillStyle=`rgba(255,255,220,${.3+Math.sin(fr*.05+i)*.2})`;svCx.fillRect(H(i,0)%w,H(i,1)%50,1,1)}}
+
+  // Venue name overlay
+  svCx.fillStyle='rgba(0,0,0,.5)';svCx.fillRect(0,h-20,w,20);
+  svCx.fillStyle=col;svCx.font='bold 8px monospace';svCx.fillText(v.nm.split('\n')[0],6,h-8);
+  document.getElementById('sv-label').textContent=`▸ ${v.nm.split('\n')[0].toUpperCase()}`;
+  document.getElementById('sv-coords').textContent=v.lat?`${v.lat.toFixed(3)}°N, ${v.lng.toFixed(3)}°E`:'VIRTUAL';
+}
+
+// ═══ MARKERS ═══
+function vis(v){return flt==='all'||flt===v.src||flt===v.cat}
+function dM(v){
+  if(!vis(v))return;
+  const x=(v.c||0)*TS+TS/2,y=(v.r||0)*TS+TS/2,cC=CC[v.cat]||'#fff',sC=SC[v.src]||cC;
+  const p=Math.sin(fr*.05+v.id*1.3)*2,sz=6+p;
+  const g=cx.createRadialGradient(x,y,0,x,y,sz*3);g.addColorStop(0,sC+'50');g.addColorStop(1,sC+'00');
+  cx.fillStyle=g;cx.fillRect(x-sz*3,y-sz*3,sz*6,sz*6);
+  cx.fillStyle='rgba(0,0,0,.5)';cx.fillRect(x-sz*.6+1,y-sz+1,sz*1.2,sz*2);
+  cx.fillStyle=cC;cx.beginPath();cx.moveTo(x,y-sz);cx.lineTo(x+sz*.6,y);cx.lineTo(x,y+sz);cx.lineTo(x-sz*.6,y);cx.closePath();cx.fill();
+  cx.fillStyle=sC+'66';cx.beginPath();cx.moveTo(x,y-sz*.4);cx.lineTo(x+sz*.25,y);cx.lineTo(x,y+sz*.4);cx.lineTo(x-sz*.25,y);cx.closePath();cx.fill();
+  cx.fillStyle='rgba(0,0,0,.5)';cx.fillRect(x-1,y-1,2,2);
+  if(sel&&sel.id===v.id){cx.strokeStyle='#fff';cx.lineWidth=1.5;cx.setLineDash([3,2]);cx.beginPath();cx.arc(x,y,sz+4,0,Math.PI*2);cx.stroke();cx.setLineDash([])}
+}
+
+function dVB(){const x=50*TS,w=(CO-50)*TS,h=RO*TS;const a=.3+Math.sin(fr*.03)*.1;cx.strokeStyle=`rgba(100,220,200,${a})`;cx.lineWidth=2;cx.setLineDash([4,3]);cx.strokeRect(x+1,1,w-2,h-2);cx.setLineDash([])}
+function dNi(){cx.fillStyle='rgba(0,4,20,.35)';cx.fillRect(0,0,cv.width,cv.height)}
+
+// ═══ MINIMAP ═══
+function drawMinimap(){
+  mmCx.fillStyle=nit?'#050a12':'#90b8d8';mmCx.fillRect(0,0,CO,RO);
+  for(let r=0;r<RO;r++)for(let c=0;c<CO;c++){
+    const t=MAP[r][c];
+    mmCx.fillStyle=t===T.P?(nit?'#0a2006':'#3a8028'):t===T.W?(nit?'#041830':'#4090d0'):t===T.M?(nit?'#302000':'#d4a830'):t===T.R?(nit?'#2a2218':'#c8a87a'):t===T.V?(nit?'#020508':'#060f1a'):(nit?'#1a1008':'#b08060');
+    mmCx.fillRect(c,r,1,1);
+  }
+  V.forEach(v=>{if(!vis(v))return;mmCx.fillStyle=CC[v.cat]||'#fff';mmCx.fillRect(v.c||0,v.r||0,2,2)});
+  const rect=mapArea.getBoundingClientRect();
+  const vp=document.getElementById('mini-vp');
+  const sx=120/CO,sy=80/RO;
+  vp.style.left=(-panX/zoom*sx/TS)+'px';vp.style.top=(-panY/zoom*sy/TS)+'px';
+  vp.style.width=(rect.width/zoom*sx/TS)+'px';vp.style.height=(rect.height/zoom*sy/TS)+'px';
+}
+
+// ═══ RENDER ═══
+function render(){
+  fr++;cx.fillStyle=nit?'#050a12':(rain?'#7898a8':'#90b8d8');cx.fillRect(0,0,cv.width,cv.height);
+  for(let r=0;r<RO;r++)for(let c=0;c<CO;c++)drawTile(r,c,MAP[r][c]);
+  dVB();dL();drawDogs();drawAutos();drawMetro();drawLandmarks();drawTrafficSignals();
+  if(nit)dNi();drawBirds();drawRain();drawParticles();
+  V.forEach(v=>dM(v));
+  if(sel)drawStreetView(sel);
+  if(fr%10===0)drawMinimap();
+  requestAnimationFrame(render);
+}
+
+// ═══ INTERACTIONS ═══
+cv.addEventListener('click',e=>{
+  if(dragging)return;
+  const rc=cv.getBoundingClientRect();const sx=cv.width/rc.width,sy=cv.height/rc.height;
+  const mx=(e.clientX-rc.left)*sx,my=(e.clientY-rc.top)*sy;
+  let hit=null;V.forEach(v=>{if(!vis(v))return;const vx=(v.c||0)*TS+TS/2,vy=(v.r||0)*TS+TS/2;if(Math.hypot(mx-vx,my-vy)<18)hit=v});
+  if(hit){sel=hit;openP(hit);panTo((hit.c||0)*TS,(hit.r||0)*TS)}else{sel=null;closeP()}
+});
+cv.addEventListener('mousemove',e=>{
+  const rc=cv.getBoundingClientRect();const sx=cv.width/rc.width,sy=cv.height/rc.height;
+  const mx=(e.clientX-rc.left)*sx,my=(e.clientY-rc.top)*sy;
+  const tt=document.getElementById('tt');let hov=null;
+  V.forEach(v=>{if(!vis(v))return;const vx=(v.c||0)*TS+TS/2,vy=(v.r||0)*TS+TS/2;if(Math.hypot(mx-vx,my-vy)<18)hov=v});
+  if(hov){cv.style.cursor='pointer';tt.innerHTML=`<b style="color:${CC[hov.cat]}">${hov.nm.replace('\n','<br>')}</b><br><span style="color:${SC[hov.src]};font-size:4px">${SN[hov.src]}</span><br><span style="color:#5a7a9a">${hov.ev.length} events</span>`;
+  const cr=mapArea.getBoundingClientRect();tt.style.left=(e.clientX-cr.left+12)+'px';tt.style.top=(e.clientY-cr.top-10)+'px';tt.style.display='block'}else{cv.style.cursor='grab';tt.style.display='none'}
+});
+
+// ═══ PANEL ═══
+function openP(v){
+  const cC=CC[v.cat]||'#fff',sC=SC[v.src]||'#aaa';
+  let html=`<div class="vn">${v.nm.replace('\n','<br>')}</div>
+  <div class="vs"><span style="color:${sC};border:1px solid ${sC}33;padding:1px 4px;font-size:4px">${SN[v.src]}</span> · ${v.ev.length} events${v.lat?` · ${v.lat.toFixed(3)}°N`:''}</div>`;
+  if(v.vibe)html+=`<div class="vibe-tag" style="border-color:${cC}44;color:${cC}88">${v.vibe}</div>`;
+  v.ev.forEach(e=>{
+    const tags=(e.tg||[]).map(t=>`<span style="color:${cC};border-color:${cC}33">${t}</span>`).join('');
+    const lk=e.lk?`<a class="lnk" href="https://${e.lk}" target="_blank" style="color:${sC}">▸ ${SN[v.src]}</a>`:'';
+    const bd=e.s==='x'?`<span class="st st-s">SOLD OUT</span>`:e.s==='w'?`<span class="st st-w">WAITLIST</span>`:e.p==='Free'?`<span class="st st-f">FREE</span>`:'';
+    let ab='';if(e.a&&e.c){const pc=Math.min(100,Math.round(e.a/e.c*100));ab=`<div class="abar"><div class="afill" style="width:${pc}%;background:${pc>80?'#ff6b6b':'#4ade80'}"></div></div><div style="font-size:4px;color:#3a5a7a">${e.a}/${e.c}</div>`}
+    html+=`<div class="ec"><div class="et" style="color:${cC}">${e.t}</div><div class="eby">${e.by||''}</div><div class="em">📅 ${e.d} · 🎟 ${e.p}</div>${bd}${ab}${lk}<div class="tgs">${tags}</div></div>`;
+  });
+  document.getElementById('rpanel-content').innerHTML=html;
+  document.getElementById('rpanel').classList.remove('closed');
+}
+function closeP(){document.getElementById('rpanel').classList.add('closed');sel=null}
+
+function toggleAll(){
+  const ae=document.getElementById('all-events');
+  if(ae.classList.contains('show')){ae.classList.remove('show');return}
+  ae.classList.add('show');
+  const allEv=[];V.forEach(v=>{if(!vis(v))return;v.ev.forEach(e=>allEv.push({...e,vnm:v.nm.split('\n')[0],cat:v.cat,src:v.src}))});
+  document.getElementById('ae-header').textContent=`ALL EVENTS — ${allEv.length} events across ${V.filter(v=>vis(v)).length} venues`;
+  document.getElementById('ae-grid').innerHTML=allEv.map(e=>{
+    const cC=CC[e.cat]||'#fff',sC=SC[e.src]||'#aaa';
+    const bd=e.s==='x'?`<span class="st st-s">SOLD OUT</span>`:e.s==='w'?`<span class="st st-w">WAITLIST</span>`:e.p==='Free'?`<span class="st st-f">FREE</span>`:'';
+    return`<div class="ae-card"><span class="ae-src" style="color:${sC};border-color:${sC}33">${SN[e.src]}</span><div class="ae-title" style="color:${cC}">${e.t}</div><div class="ae-meta">📅 ${e.d} · 🎟 ${e.p} ${bd}</div><div style="font-size:4px;color:#5a7a9a">📍 ${e.vnm}</div></div>`}).join('');
+}
+
+function sF(f,b){flt=f;document.querySelectorAll('.fb').forEach(x=>x.classList.remove('on'));b.classList.add('on');closeP()}
+function togD(){nit=!nit;document.getElementById('db').textContent=nit?'☾ NIGHT':'☀ DAY'}
+function togR(){rain=!rain;const rb=document.getElementById('rb');rb.textContent=rain?'☂ STOP':'☂ RAIN';rb.style.background=rain?'rgba(100,160,230,.15)':'none'}
+
+setInterval(()=>{tM=(tM+1)%(24*60);const h2=Math.floor(tM/60),mn=tM%60;document.getElementById('ck').textContent=`${((h2%12)||12).toString().padStart(2,'0')}:${mn.toString().padStart(2,'0')} ${h2>=12?'PM':'AM'}`;const ni=tM<6*60||tM>=19*60;if(ni!==nit){nit=ni;document.getElementById('db').textContent=nit?'☾ NIGHT':'☀ DAY'}},200);
+
+applyTransform();render();
+</script>
+</body>
+</html>

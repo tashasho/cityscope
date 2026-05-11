@@ -1,0 +1,16 @@
+{
+  "name": "cityscope",
+  "version": "1.0.0",
+  "description": "Stardew Valley-style pixel art event maps for Indian cities — Bangalore, Mumbai, Delhi",
+  "scripts": {
+    "dev": "npx serve public -l 3000",
+    "start": "npx serve public -l 3000",
+    "build": "echo 'Static site — no build step required'"
+  },
+  "keywords": ["pixel-art", "events", "india", "bangalore", "mumbai", "delhi", "stardew-valley", "map"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tashasho/cityscope"
+  }
+}

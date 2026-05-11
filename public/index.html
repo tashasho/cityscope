@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CITYSCOPE — Pixel Event Maps of India</title>
+<meta name="description" content="Stardew Valley-style pixel art event maps for Indian cities. Explore live events in Bangalore, Mumbai, and Delhi.">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060e18;font-family:'Silkscreen','Courier New',monospace;color:#ffe8a0;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden}
+
+/* Stars background */
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(1px 1px at 10% 20%,rgba(255,255,255,.4),transparent),radial-gradient(1px 1px at 30% 60%,rgba(255,255,255,.3),transparent),radial-gradient(1px 1px at 50% 10%,rgba(255,255,255,.5),transparent),radial-gradient(1px 1px at 70% 80%,rgba(255,255,255,.3),transparent),radial-gradient(1px 1px at 90% 40%,rgba(255,255,255,.4),transparent),radial-gradient(1px 1px at 15% 85%,rgba(255,255,255,.3),transparent),radial-gradient(1px 1px at 85% 15%,rgba(255,255,255,.4),transparent),radial-gradient(1px 1px at 45% 45%,rgba(255,255,255,.2),transparent),radial-gradient(1px 1px at 65% 30%,rgba(255,255,255,.3),transparent),radial-gradient(1px 1px at 25% 70%,rgba(255,255,255,.4),transparent);pointer-events:none;z-index:0;animation:twinkle 8s ease-in-out infinite alternate}
+@keyframes twinkle{0%{opacity:.7}50%{opacity:1}100%{opacity:.8}}
+
+/* Shimmer on logo */
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+header{text-align:center;padding:60px 20px 20px;position:relative;z-index:1;animation:fadeDown .8s ease-out}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+header h1{font-size:clamp(24px,5vw,42px);letter-spacing:8px;text-shadow:0 0 30px rgba(255,232,160,.4),0 4px 0 #2a1a08;margin-bottom:10px;background:linear-gradient(90deg,#ffe8a0 30%,#fff 50%,#ffe8a0 70%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 4s linear infinite}
+header p{font-size:clamp(8px,1.5vw,11px);color:#7a9ab0;letter-spacing:3px;line-height:2}
+.tagline{font-size:clamp(6px,1vw,8px);color:#4a6a8a;letter-spacing:2px;margin-top:8px}
+
+/* About blurb */
+.about{max-width:600px;text-align:center;padding:0 20px 20px;font-size:clamp(5px,1vw,7px);color:#3a5a7a;letter-spacing:1px;line-height:2.2;position:relative;z-index:1;animation:fadeDown 1s ease-out .2s both}
+.about em{color:#5a8aaa;font-style:normal}
+
+.cities{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:1000px;width:100%;padding:20px;position:relative;z-index:1}
+
+.city-card{background:linear-gradient(180deg,#0c1a2a,#08111c);border:3px solid #1a2e48;position:relative;overflow:hidden;cursor:pointer;transition:border-color .4s,transform .3s,box-shadow .4s;animation:fadeUp .6s ease-out both}
+.city-card:nth-child(1){animation-delay:.1s}
+.city-card:nth-child(2){animation-delay:.25s}
+.city-card:nth-child(3){animation-delay:.4s}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.city-card:hover{border-color:#ffe8a0;transform:translateY(-6px);box-shadow:0 12px 40px rgba(255,232,160,.08)}
+.city-card.wip{opacity:.7;cursor:default}
+.city-card.wip:hover{border-color:#4a6a8a;transform:none;box-shadow:none}
+
+.card-canvas{width:100%;height:200px;image-rendering:pixelated;display:block;background:#040a12}
+.card-info{padding:14px 16px}
+.card-city{font-size:14px;letter-spacing:3px;margin-bottom:4px;transition:text-shadow .3s}
+.city-card:hover .card-city{text-shadow:0 0 12px currentColor}
+.card-meta{font-size:7px;color:#5a7a9a;letter-spacing:1px;line-height:2}
+.card-sources{margin-top:8px;display:flex;flex-wrap:wrap;gap:4px}
+.card-src{font-size:5px;padding:2px 5px;border:1px solid;letter-spacing:.5px;transition:background .2s}
+.city-card:hover .card-src{background:rgba(255,255,255,.04)}
+.card-status{position:absolute;top:12px;right:12px;font-size:6px;padding:3px 8px;letter-spacing:1px;font-weight:700}
+.status-live{background:#00ff8830;border:1px solid #00ff88;color:#88ffbb;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.status-wip{background:#ffa50030;border:1px solid #ffa500;color:#ffcc66}
+.card-enter{display:block;margin-top:12px;padding:8px;background:none;border:2px solid #ffe8a044;color:#ffe8a0;font-family:inherit;font-size:8px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;width:100%;text-align:center;transition:background .3s,border-color .3s,letter-spacing .3s}
+.card-enter:hover{background:rgba(255,232,160,.08);border-color:#ffe8a0;letter-spacing:5px}
+
+footer{padding:30px;text-align:center;font-size:6px;color:#2a4460;letter-spacing:2px;position:relative;z-index:1}
+footer a{color:#4a6a8a;text-decoration:none;transition:color .2s}
+footer a:hover{color:#ffe8a0}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>◈ CITYSCOPE</h1>
+  <p>STARDEW VALLEY-STYLE EVENT MAPS FOR INDIAN CITIES</p>
+  <div class="tagline">EXPLORE LIVE EVENTS · PIXEL ART · REAL COORDINATES · 11+ SOURCES</div>
+</header>
+
+<div class="about">
+  <em>What if Google Maps had a baby with Stardew Valley?</em><br>
+  Explore concerts, comedy shows, AI meetups, food pop-ups & more — rendered as retro pixel worlds.<br>
+  Zero dependencies. Zero build steps. Just vibes.
+</div>
+
+<div class="cities">
+
+  <!-- BANGALORE -->
+  <div class="city-card" onclick="window.location.href='cities/bangalore.html'">
+    <span class="card-status status-live">● LIVE</span>
+    <canvas class="card-canvas" id="blr-cv"></canvas>
+    <div class="card-info">
+      <div class="card-city" style="color:#78ffd6">BENGALURU</div>
+      <div class="card-meta">75+ EVENTS · 30 VENUES · 5 SOURCES<br>ALL 5 PHASES · ZOOM/PAN · REAL COORDINATES</div>
+      <div class="card-sources">
+        <span class="card-src" style="color:#a78bfa;border-color:#a78bfa44">LUMA</span>
+        <span class="card-src" style="color:#fbbf24;border-color:#fbbf2444">PUTTINGSCENE</span>
+        <span class="card-src" style="color:#34d399;border-color:#34d39944">3RDPLACE</span>
+        <span class="card-src" style="color:#f97316;border-color:#f9731644">ALLEVENTS</span>
+        <span class="card-src" style="color:#ef4444;border-color:#ef444444">DISTRICT</span>
+      </div>
+      <button class="card-enter">▸ EXPLORE BENGALURU</button>
+    </div>
+  </div>
+
+  <!-- MUMBAI -->
+  <div class="city-card" onclick="window.location.href='cities/mumbai.html'">
+    <span class="card-status status-live">● LIVE</span>
+    <canvas class="card-canvas" id="mum-cv"></canvas>
+    <div class="card-info">
+      <div class="card-city" style="color:#ff9fdb">MUMBAI</div>
+      <div class="card-meta">45+ EVENTS · 24 VENUES · 7 SOURCES<br>ALL 5 PHASES · PENINSULA MAP · MUMBAI LOCAL</div>
+      <div class="card-sources">
+        <span class="card-src" style="color:#ef4444;border-color:#ef444444">BOOKMYSHOW</span>
+        <span class="card-src" style="color:#a78bfa;border-color:#a78bfa44">LUMA</span>
+        <span class="card-src" style="color:#ef4444;border-color:#ef444444">DISTRICT</span>
+        <span class="card-src" style="color:#34d399;border-color:#34d39944">ECHAI</span>
+        <span class="card-src" style="color:#60a5fa;border-color:#60a5fa44">MEETUP</span>
+        <span class="card-src" style="color:#fbbf24;border-color:#fbbf2444">TIMEOUT</span>
+        <span class="card-src" style="color:#f97316;border-color:#f9731644">ALLEVENTS</span>
+      </div>
+      <button class="card-enter">▸ EXPLORE MUMBAI</button>
+    </div>
+  </div>
+
+  <!-- DELHI (WIP) -->
+  <div class="city-card wip">
+    <span class="card-status status-wip">◆ COMING SOON</span>
+    <canvas class="card-canvas" id="del-cv"></canvas>
+    <div class="card-info">
+      <div class="card-city" style="color:#ffa500">DELHI NCR</div>
+      <div class="card-meta">MAPPING IN PROGRESS...<br>CONNAUGHT PLACE · HAUZ KHAS · SAKET · NOIDA · GURGAON</div>
+      <div class="card-sources">
+        <span class="card-src" style="color:#ffa500;border-color:#ffa50044">LUMA</span>
+        <span class="card-src" style="color:#ffa500;border-color:#ffa50044">DISTRICT</span>
+        <span class="card-src" style="color:#ffa500;border-color:#ffa50044">BMS</span>
+        <span class="card-src" style="color:#ffa500;border-color:#ffa50044">EVENTBRITE</span>
+        <span class="card-src" style="color:#ffa500;border-color:#ffa50044">TOWNSCRIPT</span>
+      </div>
+      <button class="card-enter" style="border-color:#ffa50044;color:#ffa500;cursor:default" disabled>◆ WORK IN PROGRESS</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  CITYSCOPE v1.0 · ZERO DEPENDENCIES · PURE HTML5 CANVAS · <a href="https://github.com/tashasho/cityscope" target="_blank">GITHUB</a> · MIT LICENSE
+</footer>
+
+<script>
+// Animated pixel art previews for each city card
+function H(r,c){return(r*73856093^c*19349663)&0x7FFFFFFF}
+let frame=0;
+
+function drawCityPreview(cvId, palette, shape){
+  const cv=document.getElementById(cvId);
+  if(!cv)return;
+  const cx=cv.getContext('2d');
+  const w=cv.width=cv.clientWidth;
+  const h=cv.height=200;
+  const ts=8;
+  const cols=Math.ceil(w/ts),rows=Math.ceil(h/ts);
+
+  cx.fillStyle=palette.sky;cx.fillRect(0,0,w,h);
+
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const x=c*ts,y=r*ts;
+      const inLand=shape(r,c,rows,cols);
+      if(!inLand){
+        // Water
+        if(r>rows*0.3){
+          cx.fillStyle=palette.water[H(r,c)%palette.water.length];
+          cx.fillRect(x,y,ts,ts);
+          if((c+Math.floor(frame/10))%6===0){
+            cx.fillStyle=palette.shimmer;cx.fillRect(x+2,y+3,ts-4,1);
+          }
+        }
+        continue;
+      }
+      // Land
+      if(r<rows*0.35){
+        // Sky area with some buildings
+        cx.fillStyle=palette.build[H(r,c)%palette.build.length];
+        cx.fillRect(x,y,ts,ts);
+        cx.fillStyle=palette.roof[H(r,c)%palette.roof.length];
+        cx.fillRect(x+1,y,ts-2,2);
+        // Windows
+        if(H(r,c)%3===0){cx.fillStyle=palette.window;cx.fillRect(x+2,y+3,2,2);cx.fillRect(x+5,y+3,2,2)}
+      } else if(H(r,c)%8===0){
+        // Park
+        cx.fillStyle=palette.park;cx.fillRect(x,y,ts,ts);
+        if(H(r,c)%2===0){cx.fillStyle=palette.tree;cx.fillRect(x+2,y+1,4,4);cx.fillRect(x+3,y+5,2,3)}
+      } else if(H(r,c)%5===0){
+        // Road
+        cx.fillStyle=palette.road;cx.fillRect(x,y,ts,ts);
+        if((c+Math.floor(frame/14))%4===0){cx.fillStyle='rgba(255,255,200,.15)';cx.fillRect(x+3,y+3,2,2)}
+        // Tiny car
+        if(H(r,c)%12===0){
+          const carX=x+(frame+H(r,c)*3)%(ts*2);
+          cx.fillStyle=palette.car;cx.fillRect(carX%w,y+2,4,2);
+        }
+      } else {
+        // Building
+        cx.fillStyle=palette.build[H(r,c)%palette.build.length];
+        cx.fillRect(x,y,ts,ts);
+        cx.fillStyle=palette.roof[H(r,c)%palette.roof.length];
+        cx.fillRect(x+1,y,ts-2,2);
+        cx.fillStyle=palette.window;
+        cx.fillRect(x+1,y+3,2,2);cx.fillRect(x+5,y+3,2,2);
+      }
+    }
+  }
+
+  // Venue markers (pulsing)
+  palette.markers.forEach(m=>{
+    const mx=m[0]*w,my=m[1]*h;
+    const pulse=Math.sin(frame*0.06+m[0]*10)*2;
+    const sz=4+pulse;
+    const g=cx.createRadialGradient(mx,my,0,mx,my,sz*2.5);
+    g.addColorStop(0,palette.markerCol+'60');g.addColorStop(1,palette.markerCol+'00');
+    cx.fillStyle=g;cx.fillRect(mx-sz*2.5,my-sz*2.5,sz*5,sz*5);
+    cx.fillStyle=palette.markerCol;
+    cx.beginPath();cx.moveTo(mx,my-sz);cx.lineTo(mx+sz*.5,my);cx.lineTo(mx,my+sz);cx.lineTo(mx-sz*.5,my);cx.closePath();cx.fill();
+  });
+}
+
+// Bangalore: roughly rectangular
+const blrPalette={
+  sky:'#90b8d8',water:['#4090d0','#50a0e0'],shimmer:'rgba(200,240,255,.4)',
+  build:['#c07850','#d48860','#b06840'],roof:['#8b3a2a','#5a8a3a','#3a5a8a'],
+  window:'rgba(200,230,255,.35)',park:'#3d8a28',tree:'#2a6818',road:'#c8a87a',car:'#88aa20',
+  markers:[[.2,.4],[.5,.5],[.7,.3],[.3,.7],[.8,.6]],markerCol:'#78ffd6'
+};
+const blrShape=(r,c,rows,cols)=>r>rows*0.15&&c>cols*0.05&&c<cols*0.9;
+
+// Mumbai: narrow peninsula
+const mumPalette={
+  sky:'#88bbdd',water:['#3888c8','#4898d8'],shimmer:'rgba(180,230,255,.4)',
+  build:['#d0a080','#b87050','#c09070'],roof:['#8b3a2a','#3a5a8a','#8a5a3a'],
+  window:'rgba(200,230,255,.35)',park:'#3a8a30',tree:'#2a7018',road:'#c0a07a',car:'#ffd700',
+  markers:[[.3,.3],[.4,.5],[.3,.7],[.5,.6],[.35,.85]],markerCol:'#ff9fdb'
+};
+const mumShape=(r,c,rows,cols)=>{
+  const nr=r/rows,nc=c/cols;
+  if(nc>0.55&&nc<0.85&&nr>0.35&&nr<0.8)return true; // Navi Mumbai
+  const maxW=nr<0.7?0.45:0.45-((nr-0.7)*1.2); // Narrowing peninsula
+  return nc>0.08&&nc<maxW&&nr>0.1;
+};
+
+// Delhi: WIP (greyed out, construction vibe)
+const delPalette={
+  sky:'#5a6878',water:['#304858','#3a5868'],shimmer:'rgba(140,180,200,.2)',
+  build:['#605848','#706858','#585048'],roof:['#4a3a2a','#3a4a3a','#3a3a4a'],
+  window:'rgba(255,200,60,.2)',park:'#2a5a20',tree:'#1a4010',road:'#8a7a6a',car:'#886600',
+  markers:[[.3,.4],[.5,.3],[.7,.5],[.4,.7]],markerCol:'#ffa500'
+};
+const delShape=(r,c,rows,cols)=>r>rows*0.1&&c>cols*0.1&&c<cols*0.85&&r<rows*0.9;
+
+function animate(){
+  frame++;
+  drawCityPreview('blr-cv',blrPalette,blrShape);
+  drawCityPreview('mum-cv',mumPalette,mumShape);
+  drawCityPreview('del-cv',delPalette,delShape);
+  requestAnimationFrame(animate);
+}
+
+// Delhi overlay: construction lines
+function drawDelOverlay(){
+  const cv=document.getElementById('del-cv');
+  if(!cv)return;
+  const cx=cv.getContext('2d');
+  const w=cv.width,h=cv.height;
+  // Diagonal construction stripes
+  cx.fillStyle='rgba(255,165,0,.06)';
+  for(let i=-h;i<w+h;i+=20){
+    cx.save();cx.translate(i,0);cx.rotate(Math.PI/4);
+    cx.fillRect(0,0,6,w*2);cx.restore();
+  }
+  // WIP text
+  cx.fillStyle='rgba(255,165,0,.15)';
+  cx.font='bold 20px monospace';
+  cx.fillText('WORK IN PROGRESS',w/2-100,h/2+5);
+  cx.font='10px monospace';
+  cx.fillText('Delhi NCR · Mapping neighborhoods...',w/2-110,h/2+22);
+}
+
+animate();
+// Draw WIP overlay after first frame
+setTimeout(drawDelOverlay,100);
+setInterval(drawDelOverlay,500);
+</script>
+</body>
+</html>
