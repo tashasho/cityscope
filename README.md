@@ -96,6 +96,8 @@ npx vercel --prod
 cityscope/
 ├── public/
 │   ├── index.html              # Landing page — animated city selector
+│   ├── submit.html             # Submit your city form
+│   ├── feedback.html           # Feedback form
 │   └── cities/
 │       ├── bangalore.html      # Bengaluru map (~700 lines of pure art)
 │       ├── mumbai.html         # Mumbai map (peninsula rendering is *chef's kiss*)
@@ -154,7 +156,7 @@ We don't want PRs. We want **event sources**.
 
 Know cool event platforms in your city? Drop them in our form — city name, event source URLs, neighborhoods worth mapping. Once we collect enough sources for a city, we'll build the pixel map and make it live.
 
-**[▸ SUBMIT CITY SOURCES](https://forms.gle/YOUR_CITY_FORM_ID)**
+**[▸ SUBMIT CITY SOURCES](https://cityscope.vercel.app/submit)**
 
 Currently scouting: **Delhi NCR** · Hyderabad · Chennai · Pune · Kolkata · Jaipur · Ahmedabad · Kochi · Goa
 
@@ -162,7 +164,7 @@ Currently scouting: **Delhi NCR** · Hyderabad · Chennai · Pune · Kolkata · 
 
 Found a bug? Have a feature idea? Just want to say nice things? We actually read every response.
 
-**[▸ SEND FEEDBACK](https://forms.gle/YOUR_FEEDBACK_FORM_ID)**
+**[▸ SEND FEEDBACK](https://cityscope.vercel.app/feedback)**
 
 No GitHub account needed. Anonymous submissions welcome.
 

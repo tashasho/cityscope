@@ -119,7 +119,7 @@ body{background:var(--bg);font-family:'Silkscreen','Courier New',monospace;color
 </div>
 <script>
 // ═══ CONFIG ═══
-const TS=16,CO=56,RO=36;
+const TS=12,CO=80,RO=56;
 let nit=false,flt='all',fr=0,sel=null,tM=9*60,rain=false;
 let zoom=1,panX=0,panY=0,dragging=false,dragStartX=0,dragStartY=0;
 const T={G:0,R:1,B:2,P:3,W:4,M:5,V:6};
@@ -128,39 +128,178 @@ const SC={luma:'#a78bfa',scene:'#fbbf24','3p':'#34d399',allevents:'#f97316',dist
 const SN={luma:'LUMA',scene:'PUTTINGSCENE','3p':'YOURTHIRDPLACE',allevents:'ALLEVENTS',district:'DISTRICT'};
 
 // ═══ REAL BANGALORE COORDINATES → TILE MAPPING ═══
-const BLR={n:13.08,s:12.86,w:77.50,e:77.78};
+const BLR={n:13.07,s:12.87,w:77.48,e:77.78};
 function geo2tile(lat,lng){
   return{
-    c:Math.round((lng-BLR.w)/(BLR.e-BLR.w)*(CO-6)),
-    r:Math.round((BLR.n-lat)/(BLR.n-BLR.s)*(RO-4))+1
+    c:Math.round((lng-BLR.w)/(BLR.e-BLR.w)*(CO-4))+2,
+    r:Math.round((BLR.n-lat)/(BLR.n-BLR.s)*(RO-4))+2
   };
 }
-
-// ═══ MAP GENERATION ═══
 function H(r,c){return(r*73856093^c*19349663)&0x7FFFFFFF}
+
+// ═══ CITY BOUNDARY POLYGON (real Bangalore municipal limits) ═══
+const CITY_BOUNDARY=[
+  [13.065,77.50],[13.07,77.54],[13.07,77.58],[13.065,77.62],[13.06,77.66],
+  [13.055,77.70],[13.04,77.74],[13.02,77.76],[12.99,77.77],[12.96,77.77],
+  [12.93,77.76],[12.91,77.74],[12.895,77.72],[12.885,77.68],[12.88,77.64],
+  [12.88,77.60],[12.885,77.56],[12.895,77.52],[12.92,77.50],[12.95,77.49],
+  [12.98,77.485],[13.01,77.49],[13.04,77.495]
+];
+function ptInPoly(lat,lng,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const yi=poly[i][0],xi=poly[i][1],yj=poly[j][0],xj=poly[j][1];
+    if(((yi>lat)!==(yj>lat))&&(lng<(xj-xi)*(lat-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
+function tileToGeo(r,c){
+  return{lat:BLR.n-(r-2)/(RO-4)*(BLR.n-BLR.s),lng:BLR.w+(c-2)/(CO-4)*(BLR.e-BLR.w)};
+}
+function isCityTile(r,c){
+  const g=tileToGeo(r,c);
+  return ptInPoly(g.lat,g.lng,CITY_BOUNDARY);
+}
+
+// ═══ REAL ROAD NETWORK ═══
+const ROADS=[
+  {nm:'Outer Ring Road',pts:[[12.905,77.56],[12.915,77.60],[12.925,77.64],[12.935,77.68],[12.950,77.72],[12.965,77.74],[12.99,77.75],[13.01,77.74],[13.03,77.72],[13.04,77.68],[13.045,77.64],[13.04,77.60],[13.03,77.56],[13.01,77.53],[12.99,77.52],[12.965,77.51],[12.94,77.52],[12.92,77.54]]},
+  {nm:'MG Road',pts:[[12.975,77.590],[12.975,77.600],[12.975,77.610],[12.975,77.620]]},
+  {nm:'Hosur Road',pts:[[12.975,77.595],[12.960,77.600],[12.940,77.610],[12.920,77.620],[12.905,77.630]]},
+  {nm:'Old Airport Road',pts:[[12.965,77.595],[12.960,77.610],[12.955,77.630],[12.950,77.650],[12.948,77.670]]},
+  {nm:'Bellary Road',pts:[[12.980,77.590],[12.995,77.590],[13.010,77.590],[13.025,77.585],[13.040,77.580],[13.055,77.575]]},
+  {nm:'Mysore Road',pts:[[12.970,77.580],[12.960,77.565],[12.950,77.550],[12.940,77.535],[12.930,77.520]]},
+  {nm:'Bannerghatta Road',pts:[[12.955,77.595],[12.940,77.595],[12.925,77.598],[12.910,77.600],[12.895,77.600]]},
+  {nm:'Tumkur Road',pts:[[12.980,77.570],[12.995,77.560],[13.010,77.555],[13.030,77.550],[13.050,77.545]]},
+  {nm:'Kanakapura Road',pts:[[12.960,77.575],[12.945,77.570],[12.930,77.560],[12.915,77.555]]},
+  {nm:'Sarjapur Road',pts:[[12.935,77.615],[12.930,77.640],[12.925,77.660],[12.920,77.680]]},
+  {nm:'Whitefield Road',pts:[[12.970,77.650],[12.970,77.670],[12.968,77.690],[12.968,77.720],[12.968,77.740]]},
+  {nm:'Hebbal Flyover',pts:[[13.030,77.580],[13.035,77.590],[13.040,77.600]]},
+  {nm:'Seshadri Road',pts:[[12.985,77.575],[12.980,77.585],[12.978,77.595]]},
+  {nm:'Sankey Road',pts:[[12.990,77.570],[12.995,77.580],[12.998,77.590]]}
+];
+
+// ═══ REAL PARKS, LAKES, MARKETS ═══
+const PARKS=[
+  {nm:'Cubbon Park',poly:[[12.980,77.590],[12.980,77.600],[12.975,77.605],[12.970,77.600],[12.970,77.590],[12.975,77.588]]},
+  {nm:'Lalbagh',poly:[[12.955,77.580],[12.955,77.590],[12.948,77.590],[12.948,77.580]]},
+  {nm:'Bannerghatta Bio Park',poly:[[12.895,77.595],[12.895,77.610],[12.885,77.610],[12.885,77.595]]},
+  {nm:'JP Park',poly:[[13.005,77.570],[13.005,77.580],[13.000,77.580],[13.000,77.570]]},
+  {nm:'Turahalli Forest',poly:[[12.900,77.550],[12.900,77.565],[12.890,77.565],[12.890,77.550]]}
+];
+const LAKES=[
+  {nm:'Ulsoor Lake',poly:[[12.985,77.615],[12.985,77.628],[12.978,77.628],[12.978,77.615]]},
+  {nm:'Bellandur Lake',poly:[[12.935,77.665],[12.935,77.690],[12.925,77.690],[12.925,77.665]]},
+  {nm:'Agara Lake',poly:[[12.925,77.635],[12.925,77.648],[12.920,77.648],[12.920,77.635]]},
+  {nm:'Hebbal Lake',poly:[[13.040,77.585],[13.040,77.600],[13.035,77.600],[13.035,77.585]]},
+  {nm:'Sankey Tank',poly:[[12.995,77.570],[12.995,77.578],[12.990,77.578],[12.990,77.570]]}
+];
+const MARKETS=[
+  {nm:'MG Road / Brigade',poly:[[12.978,77.600],[12.978,77.615],[12.972,77.615],[12.972,77.600]]},
+  {nm:'Commercial Street',poly:[[12.982,77.605],[12.982,77.612],[12.979,77.612],[12.979,77.605]]},
+  {nm:'Jayanagar 4th Block',poly:[[12.930,77.580],[12.930,77.590],[12.925,77.590],[12.925,77.580]]},
+  {nm:'Koramangala Hub',poly:[[12.938,77.610],[12.938,77.622],[12.932,77.622],[12.932,77.610]]},
+  {nm:'Indiranagar 100ft',poly:[[12.975,77.635],[12.975,77.650],[12.970,77.650],[12.970,77.635]]},
+  {nm:'Whitefield IT',poly:[[12.975,77.725],[12.975,77.755],[12.965,77.755],[12.965,77.725]]}
+];
+
+// ═══ NEIGHBORHOOD ZONES (real boundaries) ═══
+const ZONES=[
+  {nm:'Malleshwaram',poly:[[13.010,77.560],[13.010,77.580],[12.995,77.580],[12.995,77.560]],pal:0},
+  {nm:'Rajajinagar',poly:[[13.000,77.540],[13.000,77.565],[12.985,77.565],[12.985,77.540]],pal:0},
+  {nm:'CBD / MG Road',poly:[[12.985,77.585],[12.985,77.620],[12.970,77.620],[12.970,77.585]],pal:1},
+  {nm:'Indiranagar',poly:[[12.980,77.630],[12.980,77.660],[12.965,77.660],[12.965,77.630]],pal:1},
+  {nm:'Koramangala',poly:[[12.945,77.605],[12.945,77.635],[12.925,77.635],[12.925,77.605]],pal:3},
+  {nm:'HSR Layout',poly:[[12.925,77.630],[12.925,77.660],[12.905,77.660],[12.905,77.630]],pal:3},
+  {nm:'Whitefield',poly:[[12.980,77.720],[12.980,77.770],[12.955,77.770],[12.955,77.720]],pal:2},
+  {nm:'Marathahalli',poly:[[12.965,77.690],[12.965,77.720],[12.945,77.720],[12.945,77.690]],pal:2},
+  {nm:'Hebbal / Manyata',poly:[[13.050,77.570],[13.050,77.610],[13.025,77.610],[13.025,77.570]],pal:4},
+  {nm:'Jayanagar',poly:[[12.940,77.570],[12.940,77.600],[12.920,77.600],[12.920,77.570]],pal:0},
+  {nm:'JP Nagar',poly:[[12.920,77.570],[12.920,77.600],[12.900,77.600],[12.900,77.570]],pal:3},
+  {nm:'Bellandur',poly:[[12.940,77.660],[12.940,77.700],[12.920,77.700],[12.920,77.660]],pal:2},
+  {nm:'Electronic City',poly:[[12.900,77.650],[12.900,77.690],[12.880,77.690],[12.880,77.650]],pal:2}
+];
+function getZone(r,c){
+  const g=tileToGeo(r,c);
+  for(let i=0;i<ZONES.length;i++){if(ptInPoly(g.lat,g.lng,ZONES[i].poly))return ZONES[i].pal;}
+  // Fallback: directional heuristic
+  if(c>=CO*0.75)return 2;if(r<=RO*0.25)return 4;if(r>=RO*0.7)return 3;if(c<=CO*0.25)return 0;return 1;
+}
+
+// ═══ MAP GENERATION (geographically accurate) ═══
 function mk(){
-  const m=Array.from({length:RO},()=>Array(CO).fill(T.B));
-  [3,4,9,10,16,21,22,27,28,33].forEach(r=>{for(let c=0;c<CO;c++)m[r][c]=T.R});
-  [6,7,12,13,19,20,26,27,33,34,40,41,48,49].forEach(c=>{for(let r=0;r<RO;r++)m[r][c]=T.R});
-  for(let r=11;r<=15;r++)for(let c=8;c<=18;c++)m[r][c]=T.P;
-  for(let r=4;r<=8;r++)for(let c=28;c<=34;c++)m[r][c]=T.W;
-  for(let r=23;r<=27;r++)for(let c=8;c<=13;c++)m[r][c]=T.P;
-  for(let r=28;r<=31;r++)for(let c=34;c<=39;c++)m[r][c]=T.W;
-  for(let r=4;r<=7;r++)for(let c=36;c<=39;c++)m[r][c]=T.P;
-  for(let r=17;r<=20;r++)for(let c=14;c<=25;c++)m[r][c]=T.M;
-  for(let r=21;r<=24;r++)for(let c=28;c<=33;c++)m[r][c]=T.M;
-  for(let r=23;r<=26;r++)for(let c=21;c<=26;c++)m[r][c]=T.M;
-  for(let r=0;r<RO;r++)for(let c=50;c<CO;c++)m[r][c]=T.V;
-  for(let r=0;r<=2;r++)for(let c=0;c<=5;c++)m[r][c]=T.G;
-  for(let r=29;r<=31;r++)for(let c=14;c<=18;c++)m[r][c]=T.G;
+  const m=Array.from({length:RO},()=>Array(CO).fill(T.G));// default: outside city
+
+  // Step 1: Fill city boundary as buildings
+  for(let r=0;r<RO;r++)for(let c=0;c<CO;c++){if(isCityTile(r,c))m[r][c]=T.B;}
+
+  // Step 2: Stamp parks
+  PARKS.forEach(p=>{
+    for(let r=0;r<RO;r++)for(let c=0;c<CO;c++){
+      const g=tileToGeo(r,c);
+      if(ptInPoly(g.lat,g.lng,p.poly))m[r][c]=T.P;
+    }
+  });
+
+  // Step 3: Stamp lakes
+  LAKES.forEach(l=>{
+    for(let r=0;r<RO;r++)for(let c=0;c<CO;c++){
+      const g=tileToGeo(r,c);
+      if(ptInPoly(g.lat,g.lng,l.poly))m[r][c]=T.W;
+    }
+  });
+
+  // Step 4: Stamp markets
+  MARKETS.forEach(mk=>{
+    for(let r=0;r<RO;r++)for(let c=0;c<CO;c++){
+      const g=tileToGeo(r,c);
+      if(ptInPoly(g.lat,g.lng,mk.poly))m[r][c]=T.M;
+    }
+  });
+
+  // Step 5: Draw roads by tracing real paths between waypoints
+  ROADS.forEach(rd=>{
+    for(let i=0;i<rd.pts.length-1;i++){
+      const a=geo2tile(rd.pts[i][0],rd.pts[i][1]);
+      const b=geo2tile(rd.pts[i+1][0],rd.pts[i+1][1]);
+      const steps=Math.max(Math.abs(b.c-a.c),Math.abs(b.r-a.r))*2+1;
+      for(let s=0;s<=steps;s++){
+        const t=s/steps;
+        const rc=Math.round(a.r+(b.r-a.r)*t);
+        const cc=Math.round(a.c+(b.c-a.c)*t);
+        if(rc>=0&&rc<RO&&cc>=0&&cc<CO&&m[rc][cc]===T.B)m[rc][cc]=T.R;
+      }
+    }
+  });
+
+  // Step 6: Virtual zone (right edge)
+  for(let r=0;r<RO;r++)for(let c=CO-6;c<CO;c++)m[r][c]=T.V;
+
   return m;
 }
 const MAP=mk();
-function getZone(r,c){if(c>=42)return 2;if(c>=28&&r<=15)return 2;if(r<=8&&c<28)return 4;if(r>=23)return 3;if(c<=13&&r>=11)return 0;return 1}
-function getTreeType(r,c){if(r>=11&&r<=15&&c>=8&&c<=18)return H(r,c)%3===0?'banyan':'gulmohar';if(r>=23&&r<=27&&c>=8&&c<=13)return H(r,c)%2===0?'gulmohar':'palm';if(r>=4&&r<=7&&c>=36&&c<=39)return'palm';return['banyan','palm','gulmohar'][H(r,c)%3]}
+
+function getTreeType(r,c){
+  const g=tileToGeo(r,c);
+  // Cubbon Park / Lalbagh: banyans and gulmohar
+  if(g.lat>12.968&&g.lat<12.982&&g.lng>77.588&&g.lng<77.605)return H(r,c)%3===0?'banyan':'gulmohar';
+  // JP Park area: mix
+  if(g.lat>12.998&&g.lat<13.008&&g.lng>77.568&&g.lng<77.582)return H(r,c)%2===0?'gulmohar':'palm';
+  // Whitefield area: palms
+  if(g.lng>77.72)return'palm';
+  // South: rain trees
+  if(g.lat<12.92)return H(r,c)%2===0?'banyan':'gulmohar';
+  return['banyan','palm','gulmohar','rain'][H(r,c)%4];
+}
+
+// Flyovers at key junctions
 const FLYOVER=new Set();
-for(let c=21;c<=26;c++){FLYOVER.add(`22,${c}`);FLYOVER.add(`21,${c}`);}
-for(let c=8;c<=14;c++){FLYOVER.add(`3,${c}`);FLYOVER.add(`4,${c}`);}
+// Silk Board junction area
+{const j=geo2tile(12.917,77.622);for(let d=-1;d<=1;d++){FLYOVER.add(`${j.r+d},${j.c}`);FLYOVER.add(`${j.r},${j.c+d}`);}}
+// Hebbal flyover
+{const j=geo2tile(13.035,77.590);for(let d=-1;d<=1;d++){FLYOVER.add(`${j.r+d},${j.c}`);FLYOVER.add(`${j.r},${j.c+d}`);}}
+// KR Puram junction
+{const j=geo2tile(13.000,77.700);for(let d=-1;d<=1;d++){FLYOVER.add(`${j.r+d},${j.c}`);FLYOVER.add(`${j.r},${j.c+d}`);}}
 
 // ═══ PALETTES ═══
 const BPAL_D=[['#c46838','#b45828','#d47848','#a84818'],['#c87850','#d08868','#b86840','#dda080'],['#6888a0','#7898b0','#5878a0','#88a8c0'],['#d0a878','#c89868','#e0b888','#b88858'],['#d8c0a0','#c8b090','#e0c8a8','#d0b898']];
@@ -306,7 +445,15 @@ document.getElementById('ev-ct').textContent=`${totalEv} EVENTS · ${V.length} V
 
 // ═══ CANVAS + ZOOM/PAN ═══
 const cv=document.getElementById('map'),cx=cv.getContext('2d');
-cv.width=CO*TS;cv.height=RO*TS;
+// Full-screen canvas: always fills viewport
+const mapW=CO*TS,mapH=RO*TS;
+function resizeCanvas(){
+  const area=document.getElementById('map-area');
+  cv.width=Math.max(mapW,area.clientWidth);
+  cv.height=Math.max(mapH,area.clientHeight);
+}
+resizeCanvas();window.addEventListener('resize',resizeCanvas);
+const ofsX=Math.max(0,Math.floor((cv.width-mapW)/2)),ofsY=Math.max(0,Math.floor((cv.height-mapH)/2));
 const mmCv=document.getElementById('mm'),mmCx=mmCv.getContext('2d');
 mmCv.width=CO;mmCv.height=RO;
 const svCv=document.getElementById('sv'),svCx=svCv.getContext('2d');
@@ -430,16 +577,72 @@ function drawTile(r,c,t){
   if(t===T.V){if((r+c)%2===0){cx.fillStyle='rgba(100,220,200,.02)';cx.fillRect(x,y,TS,TS)}cx.fillStyle='rgba(100,220,200,.04)';cx.fillRect(x,y,1,TS);cx.fillRect(x,y,TS,1);if(H(r,c)%6===0&&fr%40<20){cx.fillStyle='rgba(100,220,200,.6)';cx.fillRect(x+7,y+7,2,2)}}
 }
 
-// ═══ LABELS ═══
-const LB=[{t:"MALLESHWARAM",x:0,y:7,s:5},{t:"RAJAJINAGAR",x:0,y:14,s:5},{t:"HEBBAL",x:4,y:1,s:5},{t:"MANYATA TECH",x:35,y:1,s:5},{t:"WHITEFIELD",x:43,y:1,s:5},{t:"CUBBON PARK",x:9,y:11,s:6},{t:"ULSOOR LAKE",x:29,y:5,s:5},{t:"MG ROAD",x:14,y:17,s:6},{t:"INDIRANAGAR",x:28,y:20,s:5},{t:"KORAMANGALA",x:21,y:23,s:5},{t:"LALBAGH",x:8,y:24,s:6},{t:"JAYANAGAR",x:14,y:29,s:5},{t:"HSR LAYOUT",x:31,y:30,s:5},{t:"AGARA LAKE",x:34,y:29,s:5},{t:"MARATHAHALLI",x:35,y:11,s:5},{t:"BELLANDUR",x:42,y:22,s:5},{t:"▸ VIRTUAL",x:50,y:1,s:6},{t:"ELECTRONIC CITY ↓",x:28,y:34,s:5}];
-const VIBES=[{t:'"fifth avenue"',x:16,y:18,c:'#ffd700'},{t:'"hipster cafes"',x:29,y:22,c:'#e879f9'},{t:'"startup central"',x:22,y:25,c:'#00bcd4'},{t:'"nice houses"',x:10,y:18,c:'#ff9f43'},{t:'"IT crowd"',x:44,y:3,c:'#00bcd4'},{t:'"fresh air!"',x:10,y:13,c:'#4ade80'},{t:'"board gamers"',x:32,y:32,c:'#c678dd'},{t:'"chai & chaos"',x:2,y:15,c:'#ff9f43'},{t:'"traffic graveyard"',x:22,y:22,c:'#ff6b6b'}];
-function dL(){LB.forEach(l=>{cx.font=`${l.s}px 'Silkscreen',monospace`;cx.fillStyle=nit?'rgba(255,208,60,.35)':'rgba(255,250,200,.6)';cx.fillText(l.t,l.x*TS+1,l.y*TS+TS-2)});VIBES.forEach(v=>{cx.font=`italic 5px 'Courier New',monospace`;cx.fillStyle=(nit?v.c+'30':v.c+'50');cx.fillText(v.t,v.x*TS,v.y*TS+TS-1)})}
+// ═══ LABELS (geo-positioned) ═══
+const LB=[
+  {t:"MALLESHWARAM",lat:13.005,lng:77.570,s:4},{t:"RAJAJINAGAR",lat:12.990,lng:77.550,s:4},
+  {t:"HEBBAL",lat:13.045,lng:77.585,s:4},{t:"MANYATA TECH",lat:13.035,lng:77.600,s:4},
+  {t:"WHITEFIELD",lat:12.970,lng:77.740,s:5},{t:"CUBBON PARK",lat:12.976,lng:77.593,s:5},
+  {t:"ULSOOR LAKE",lat:12.982,lng:77.620,s:4},{t:"MG ROAD",lat:12.975,lng:77.607,s:5},
+  {t:"INDIRANAGAR",lat:12.972,lng:77.640,s:4},{t:"KORAMANGALA",lat:12.935,lng:77.620,s:4},
+  {t:"LALBAGH",lat:12.950,lng:77.584,s:5},{t:"JAYANAGAR",lat:12.930,lng:77.585,s:4},
+  {t:"HSR LAYOUT",lat:12.915,lng:77.645,s:4},{t:"AGARA LAKE",lat:12.922,lng:77.640,s:4},
+  {t:"MARATHAHALLI",lat:12.955,lng:77.700,s:4},{t:"BELLANDUR",lat:12.930,lng:77.675,s:4},
+  {t:"ELECTRONIC CITY ↓",lat:12.895,lng:77.670,s:4},{t:"▸ VIRTUAL",lat:13.050,lng:77.760,s:5},
+  {t:"SANKEY TANK",lat:12.993,lng:77.573,s:3},{t:"JP NAGAR",lat:12.910,lng:77.580,s:4},
+  {t:"SARJAPUR RD",lat:12.910,lng:77.680,s:4},{t:"SILK BOARD ⚠",lat:12.917,lng:77.622,s:4},
+  {t:"BANNERGHATTA",lat:12.890,lng:77.600,s:4}
+];
+const VIBES=[
+  {t:'"fifth avenue"',lat:12.978,lng:77.608,c:'#ffd700'},{t:'"hipster cafes"',lat:12.972,lng:77.642,c:'#e879f9'},
+  {t:'"startup central"',lat:12.935,lng:77.622,c:'#00bcd4'},{t:'"nice houses"',lat:12.975,lng:77.595,c:'#ff9f43'},
+  {t:'"IT crowd"',lat:12.970,lng:77.742,c:'#00bcd4'},{t:'"fresh air!"',lat:12.976,lng:77.595,c:'#4ade80'},
+  {t:'"board gamers"',lat:12.915,lng:77.648,c:'#c678dd'},{t:'"chai & chaos"',lat:13.005,lng:77.572,c:'#ff9f43'},
+  {t:'"traffic graveyard"',lat:12.920,lng:77.625,c:'#ff6b6b'}
+];
+function dL(){
+  // Locality cards with background
+  LB.forEach(l=>{
+    const p=geo2tile(l.lat,l.lng);
+    const x=p.c*TS,y=p.r*TS;
+    cx.font=`bold ${l.s}px 'Silkscreen',monospace`;
+    const tw=cx.measureText(l.t).width;
+    const pw=tw+6,ph=l.s+5;
+    cx.fillStyle=nit?'rgba(5,10,18,.75)':'rgba(20,10,0,.55)';
+    cx.fillRect(x-1,y-ph+2,pw,ph);
+    cx.strokeStyle=nit?'rgba(255,208,60,.2)':'rgba(255,250,200,.35)';
+    cx.lineWidth=1;cx.strokeRect(x-1,y-ph+2,pw,ph);
+    cx.fillStyle=nit?'rgba(255,208,60,.5)':'rgba(255,250,200,.75)';
+    cx.fillText(l.t,x+2,y-1);
+  });
+  VIBES.forEach(v=>{
+    const p=geo2tile(v.lat,v.lng);
+    cx.font=`italic 4px 'Courier New',monospace`;
+    cx.fillStyle=(nit?v.c+'30':v.c+'50');
+    cx.fillText(v.t,p.c*TS,p.r*TS+TS-1);
+  });
+}
+
+// Zone boundary outlines for visual segregation
+function drawZoneBorders(){
+  cx.lineWidth=1;cx.setLineDash([3,3]);
+  ZONES.forEach(z=>{
+    const pts=z.poly.map(p=>{const t=geo2tile(p[0],p[1]);return{x:t.c*TS,y:t.r*TS}});
+    const pal=BPAL_D[z.pal][0];
+    cx.strokeStyle=nit?pal+'40':pal+'60';
+    cx.beginPath();
+    pts.forEach((p,i)=>i===0?cx.moveTo(p.x,p.y):cx.lineTo(p.x,p.y));
+    cx.closePath();cx.stroke();
+  });
+  cx.setLineDash([]);
+}
 
 // ═══ PHASE 2: RICKSHAWS, DOGS, BIRDS, RAIN ═══
-const AUTOS=[];for(let i=0;i<14;i++){AUTOS.push({r:[3,4,9,10,16,21,27][H(i,0)%7],sC:H(i,1)%CO,sp:.8+H(i,2)%3*.4,dir:H(i,3)%2?1:-1,clr:H(i,4)%3})}
+// Find road rows dynamically
+const roadRows=[];for(let r=0;r<RO;r++){let ct=0;for(let c=0;c<CO;c++)if(MAP[r][c]===T.R)ct++;if(ct>3)roadRows.push(r);}
+const AUTOS=[];for(let i=0;i<14;i++){AUTOS.push({r:roadRows[H(i,0)%roadRows.length],sC:H(i,1)%CO,sp:.8+H(i,2)%3*.4,dir:H(i,3)%2?1:-1,clr:H(i,4)%3})}
 function drawAutos(){AUTOS.forEach(a=>{const px=((a.sC*TS+fr*a.sp*a.dir+CO*TS*10)%(CO*TS)),py=a.r*TS+2;if(!MAP[a.r]||MAP[a.r][Math.floor(px/TS)]!==T.R)return;cx.fillStyle=nit?'#1a1a0a':'#222';cx.fillRect(px+1,py,5,2);cx.fillStyle=a.clr===0?(nit?'#3a4a10':'#88aa20'):a.clr===1?(nit?'#0a3a10':'#20aa40'):(nit?'#2a2a00':'#ccaa00');cx.fillRect(px,py+2,7,4);cx.fillStyle=nit?'rgba(180,220,255,.4)':'rgba(180,220,255,.6)';cx.fillRect(px+(a.dir>0?5:0),py+2,2,2);cx.fillStyle=nit?'#1a1a1a':'#333';cx.fillRect(px+1,py+6,2,1);cx.fillRect(px+4,py+6,2,1);if(nit){const gl=cx.createRadialGradient(a.dir>0?px+7:px-4,py+3,0,a.dir>0?px+7:px-4,py+3,10);gl.addColorStop(0,'rgba(255,220,80,.3)');gl.addColorStop(1,'rgba(255,220,80,0)');cx.fillStyle=gl;cx.fillRect(px-10,py-7,24,20)}})}
 
-const DOGS=[];for(let i=0;i<18;i++){const dr=H(i*7,i*3)%RO,dc=H(i*3,i*7)%CO;if(dc<48)DOGS.push({r:dr,c:dc,f:H(i,i)%2})}
+const DOGS=[];for(let i=0;i<18;i++){const dr=H(i*7,i*3)%RO,dc=H(i*3,i*7)%CO;if(dc<CO-6)DOGS.push({r:dr,c:dc,f:H(i,i)%2})}
 function drawDogs(){DOGS.forEach(d=>{if(MAP[d.r][d.c]!==T.R&&MAP[d.r][d.c]!==T.G)return;const adj=d.r>0?MAP[d.r-1][d.c]:T.R;if(adj!==T.B)return;const x=d.c*TS+(d.f?2:6),y=d.r*TS+10;cx.fillStyle=nit?'rgba(140,100,60,.4)':'#8a6a40';cx.fillRect(x,y,5,3);cx.fillStyle=nit?'rgba(120,80,40,.4)':'#7a5a30';cx.fillRect(x+(d.f?5:-2),y-1,3,3)})}
 
 function drawBirds(){[{y:1,sp:.6,sz:5,o:0},{y:0,sp:.4,sz:4,o:200},{y:2,sp:.8,sz:3,o:400}].forEach(f=>{const bx=((fr*f.sp+f.o)%(CO*TS+200))-100;cx.fillStyle=nit?'rgba(200,200,200,.35)':'rgba(40,30,20,.45)';for(let b=0;b<f.sz;b++){const x2=bx-b*6,y2=f.y*TS+4+b*2+Math.sin(fr*.15+b)*1.5;cx.fillRect(x2-1,y2,1,1);cx.fillRect(x2,y2-1,1,1);cx.fillRect(x2+1,y2,1,1)}for(let b=1;b<f.sz;b++){const x2=bx+b*6,y2=f.y*TS+4+b*2+Math.sin(fr*.15+b)*1.5;cx.fillRect(x2-1,y2,1,1);cx.fillRect(x2,y2-1,1,1);cx.fillRect(x2+1,y2,1,1)}})}
@@ -447,40 +650,56 @@ function drawBirds(){[{y:1,sp:.6,sz:5,o:0},{y:0,sp:.4,sz:4,o:200},{y:2,sp:.8,sz:
 const DROPS=[];for(let i=0;i<120;i++)DROPS.push({x:Math.random()*CO*TS,y:Math.random()*RO*TS,sp:2+Math.random()*3,ln:2+Math.random()*3});
 function drawRain(){if(!rain)return;cx.fillStyle='rgba(10,15,25,.12)';cx.fillRect(0,0,cv.width,cv.height);cx.strokeStyle=nit?'rgba(100,140,200,.3)':'rgba(140,180,220,.35)';cx.lineWidth=1;DROPS.forEach(d=>{d.y+=d.sp;d.x+=.5;if(d.y>RO*TS){d.y=-10;d.x=Math.random()*CO*TS}cx.beginPath();cx.moveTo(d.x,d.y);cx.lineTo(d.x+.5,d.y+d.ln);cx.stroke()});for(let r=0;r<RO;r++)for(let c=0;c<CO;c++)if(MAP[r][c]===T.R&&H(r,c)%10===0){cx.fillStyle=nit?'rgba(60,100,160,.15)':'rgba(120,170,220,.2)';cx.fillRect(c*TS+2,r*TS+10,8,3)}}
 
-// ═══ PHASE 3: METRO, LANDMARKS, TRAFFIC ═══
+// ═══ PHASE 3: METRO (Namma Metro - real routes), LANDMARKS, TRAFFIC ═══
 function drawMetro(){
-  cx.fillStyle=nit?'rgba(130,80,200,.5)':'rgba(130,80,200,.6)';cx.fillRect(2*TS,16*TS+7,38*TS,2);
-  const tpx=((fr*1.2)%(40*TS));cx.fillStyle=nit?'#6040a0':'#8060c0';cx.fillRect(tpx,16*TS+4,12,5);
-  cx.fillStyle=nit?'rgba(255,255,200,.5)':'rgba(255,255,200,.7)';cx.fillRect(tpx,16*TS+5,2,2);
+  // Purple Line: Whitefield → Challaghatta (east-west, ~12.985°N)
+  const purplePts=[[12.985,77.74],[12.985,77.70],[12.980,77.66],[12.975,77.62],[12.975,77.60],[12.975,77.58],[12.975,77.56],[12.980,77.54],[12.985,77.52]];
+  cx.strokeStyle=nit?'rgba(130,80,200,.5)':'rgba(130,80,200,.6)';cx.lineWidth=2;cx.beginPath();
+  purplePts.forEach((p,i)=>{const t=geo2tile(p[0],p[1]);i===0?cx.moveTo(t.c*TS+TS/2,t.r*TS+TS/2):cx.lineTo(t.c*TS+TS/2,t.r*TS+TS/2)});cx.stroke();
+  // Purple train
+  const pProg=(fr*1.2)%(purplePts.length-1);const pI=Math.floor(pProg),pF=pProg-pI;
+  if(pI<purplePts.length-1){const a=geo2tile(purplePts[pI][0],purplePts[pI][1]),b=geo2tile(purplePts[pI+1][0],purplePts[pI+1][1]);
+    const tx=a.c*TS+(b.c-a.c)*pF*TS,ty=a.r*TS+(b.r-a.r)*pF*TS;cx.fillStyle=nit?'#6040a0':'#8060c0';cx.fillRect(tx,ty,10,4);cx.fillStyle='rgba(255,255,200,.6)';cx.fillRect(tx,ty+1,2,2)}
 
-  cx.fillStyle=nit?'rgba(60,180,80,.5)':'rgba(60,180,80,.6)';cx.fillRect(12*TS+7,2*TS,2,31*TS);
-  const tgy=((fr*1.0)%(32*TS));cx.fillStyle=nit?'#208040':'#30a050';cx.fillRect(12*TS+4,tgy,5,12);
+  // Green Line: Nagasandra → Silk Institute (north-south, ~77.59°E)
+  const greenPts=[[13.050,77.580],[13.035,77.585],[13.020,77.590],[13.005,77.592],[12.985,77.592],[12.975,77.590],[12.960,77.590],[12.945,77.585],[12.930,77.580],[12.915,77.575]];
+  cx.strokeStyle=nit?'rgba(60,180,80,.5)':'rgba(60,180,80,.6)';cx.lineWidth=2;cx.beginPath();
+  greenPts.forEach((p,i)=>{const t=geo2tile(p[0],p[1]);i===0?cx.moveTo(t.c*TS+TS/2,t.r*TS+TS/2):cx.lineTo(t.c*TS+TS/2,t.r*TS+TS/2)});cx.stroke();
+  // Green train
+  const gProg=(fr*1.0)%(greenPts.length-1);const gI=Math.floor(gProg),gF=gProg-gI;
+  if(gI<greenPts.length-1){const a=geo2tile(greenPts[gI][0],greenPts[gI][1]),b=geo2tile(greenPts[gI+1][0],greenPts[gI+1][1]);
+    const tx=a.c*TS+(b.c-a.c)*gF*TS,ty=a.r*TS+(b.r-a.r)*gF*TS;cx.fillStyle=nit?'#208040':'#30a050';cx.fillRect(tx,ty,4,10);cx.fillStyle='rgba(255,255,200,.6)';cx.fillRect(tx+1,ty,2,2)}
 
-  cx.fillStyle=nit?'rgba(255,200,60,.6)':'rgba(255,200,60,.8)';cx.fillRect(12*TS+3,16*TS+3,10,10);
-  cx.fillStyle=nit?'#ffe8a0':'#fff';cx.font='4px monospace';cx.fillText('M',12*TS+5,16*TS+10);
+  // Interchange station: Majestic
+  const mj=geo2tile(12.977,77.592);cx.fillStyle=nit?'rgba(255,200,60,.6)':'rgba(255,200,60,.8)';cx.fillRect(mj.c*TS-1,mj.r*TS-1,TS+2,TS+2);
+  cx.fillStyle=nit?'#ffe8a0':'#fff';cx.font='3px monospace';cx.fillText('M',mj.c*TS+2,mj.r*TS+TS/2+1);
 }
 
 function drawLandmarks(){
-  // Vidhana Soudha
-  let vx=14*TS,vy=15*TS;
-  cx.fillStyle=nit?'#1a1808':'#d0c0a0';cx.fillRect(vx-2,vy+4,TS+4,12);
-  cx.fillStyle=nit?'#2a2008':'#c8a868';cx.fillRect(vx+2,vy+1,TS-4,4);cx.fillRect(vx+4,vy-1,TS-8,3);cx.fillRect(vx+6,vy-2,4,2);
-  cx.fillStyle='#ff6633';cx.fillRect(vx+7,vy-4,1,3);cx.fillStyle='#fff';cx.fillRect(vx+7,vy-3,1,1);cx.fillStyle='#138808';cx.fillRect(vx+7,vy-2,1,1);
+  // Vidhana Soudha (geo: 12.979, 77.591)
+  const vs=geo2tile(12.979,77.591);let vx=vs.c*TS,vy=vs.r*TS;
+  cx.fillStyle=nit?'#1a1808':'#d0c0a0';cx.fillRect(vx-2,vy+4,TS+4,10);
+  cx.fillStyle=nit?'#2a2008':'#c8a868';cx.fillRect(vx+2,vy+1,TS-4,4);cx.fillRect(vx+4,vy-1,TS-8,3);cx.fillRect(vx+5,vy-2,3,2);
+  cx.fillStyle='#ff6633';cx.fillRect(vx+6,vy-4,1,3);cx.fillStyle='#fff';cx.fillRect(vx+6,vy-3,1,1);cx.fillStyle='#138808';cx.fillRect(vx+6,vy-2,1,1);
 
-  // Bangalore Palace
-  let bx=20*TS,by=6*TS;
-  cx.fillStyle=nit?'#1a1010':'#c88080';cx.fillRect(bx+1,by+4,14,12);
-  cx.fillStyle=nit?'#2a1818':'#d09090';cx.fillRect(bx,by+2,4,6);cx.fillRect(bx+12,by+2,4,6);
-  cx.fillRect(bx,by+1,2,2);cx.fillRect(bx+2,by,2,2);cx.fillRect(bx+12,by+1,2,2);cx.fillRect(bx+14,by,2,2);
+  // Bangalore Palace (geo: 12.999, 77.592)
+  const bp=geo2tile(12.999,77.592);let bx=bp.c*TS,by=bp.r*TS;
+  cx.fillStyle=nit?'#1a1010':'#c88080';cx.fillRect(bx+1,by+4,10,8);
+  cx.fillStyle=nit?'#2a1818':'#d09090';cx.fillRect(bx,by+2,3,5);cx.fillRect(bx+8,by+2,3,5);
+  cx.fillRect(bx,by+1,2,2);cx.fillRect(bx+2,by,2,2);cx.fillRect(bx+8,by+1,2,2);cx.fillRect(bx+10,by,2,2);
 }
 
 function drawTrafficSignals(){
-  [[16,19],[16,26],[16,33],[9,19],[22,19],[22,26],[27,12]].forEach(([r,c])=>{
-    const sx=c*TS+TS-3,sy=r*TS+1;cx.fillStyle=nit?'#1a1a1a':'#333';cx.fillRect(sx-1,sy,4,8);
-    const ph=Math.floor((fr+c*20+r*30)/60)%3;
-    cx.fillStyle=ph===0||(r===22&&c===19)?(nit?'#ff3030':'#ff2020'):(nit?'#3a0000':'#660000');cx.fillRect(sx,sy+1,2,2);
-    cx.fillStyle=ph===1&&!(r===22&&c===19)?(nit?'#ffcc00':'#ddaa00'):(nit?'#2a2000':'#554400');cx.fillRect(sx,sy+3,2,2);
-    cx.fillStyle=ph===2&&!(r===22&&c===19)?(nit?'#30ff30':'#20dd20'):(nit?'#003a00':'#005500');cx.fillRect(sx,sy+5,2,2);
+  // Real junction locations
+  const junctions=[[12.977,77.592],[12.975,77.610],[12.960,77.600],[12.935,77.615],[12.917,77.622],[13.000,77.700],[12.970,77.650]];
+  junctions.forEach(([lat,lng])=>{
+    const p=geo2tile(lat,lng);const sx=p.c*TS+TS-3,sy=p.r*TS+1;
+    cx.fillStyle=nit?'#1a1a1a':'#333';cx.fillRect(sx-1,sy,4,8);
+    const ph=Math.floor((fr+p.c*20+p.r*30)/60)%3;
+    const isSilkBoard=(lat===12.917);// Silk Board always red :)
+    cx.fillStyle=ph===0||isSilkBoard?(nit?'#ff3030':'#ff2020'):(nit?'#3a0000':'#660000');cx.fillRect(sx,sy+1,2,2);
+    cx.fillStyle=ph===1&&!isSilkBoard?(nit?'#ffcc00':'#ddaa00'):(nit?'#2a2000':'#554400');cx.fillRect(sx,sy+3,2,2);
+    cx.fillStyle=ph===2&&!isSilkBoard?(nit?'#30ff30':'#20dd20'):(nit?'#003a00':'#005500');cx.fillRect(sx,sy+5,2,2);
   });
 }
 
@@ -594,22 +813,101 @@ function drawStreetView(v){
   document.getElementById('sv-coords').textContent=v.lat?`${v.lat.toFixed(3)}°N, ${v.lng.toFixed(3)}°E`:'VIRTUAL';
 }
 
-// ═══ MARKERS ═══
+// ═══ MARKERS — PIXEL ART ICONS PER CATEGORY ═══
 function vis(v){return flt==='all'||flt===v.src||flt===v.cat}
+
+// Procedural pixel-art sprites by category
+function drawIcon(cx,x,y,cat,sz){
+  const s=Math.max(1,Math.floor(sz/8));
+  switch(cat){
+    case 'food':// Coffee cup ☕
+      cx.fillStyle='#8B4513';cx.fillRect(x-3*s,y-2*s,6*s,5*s);// cup body
+      cx.fillStyle='#D2691E';cx.fillRect(x-2*s,y-2*s,4*s,4*s);// cup front
+      cx.fillStyle='#FFE4C4';cx.fillRect(x-1*s,y-1*s,2*s,2*s);// liquid
+      cx.fillStyle='#8B4513';cx.fillRect(x+3*s,y-1*s,2*s,3*s);// handle
+      cx.fillStyle='rgba(255,255,255,.4)';// steam
+      if(fr%20<10){cx.fillRect(x-1*s,y-4*s,1*s,2*s);cx.fillRect(x+1*s,y-5*s,1*s,2*s);}
+      break;
+    case 'tech':// Laptop 💻
+      cx.fillStyle='#607898';cx.fillRect(x-3*s,y-2*s,6*s,4*s);// screen
+      cx.fillStyle=nit?'#2040a0':'#90c0ff';cx.fillRect(x-2*s,y-1*s,4*s,2*s);// display
+      cx.fillStyle='#4a5a6a';cx.fillRect(x-4*s,y+2*s,8*s,1*s);// keyboard
+      if(fr%30<15){cx.fillStyle='#00ff88';cx.fillRect(x-1*s,y-1*s,1*s,1*s);}// cursor blink
+      break;
+    case 'music':// Mic 🎤
+      cx.fillStyle='#c0c0c0';cx.fillRect(x-1*s,y-3*s,2*s,3*s);// mic head
+      cx.fillStyle='#888';cx.fillRect(x-0*s,y+0*s,1*s,3*s);// stand
+      cx.fillStyle='#666';cx.fillRect(x-2*s,y+3*s,4*s,1*s);// base
+      if(fr%16<8){cx.fillStyle='rgba(255,105,180,.3)';cx.fillRect(x-3*s,y-4*s,1*s,1*s);cx.fillRect(x+2*s,y-3*s,1*s,1*s);}// notes
+      break;
+    case 'art':// Palette 🎨
+      cx.fillStyle='#D2691E';cx.fillRect(x-3*s,y-2*s,6*s,4*s);// palette
+      cx.fillStyle='#FF4444';cx.fillRect(x-2*s,y-1*s,1*s,1*s);
+      cx.fillStyle='#4444FF';cx.fillRect(x+0*s,y-1*s,1*s,1*s);
+      cx.fillStyle='#FFFF00';cx.fillRect(x+2*s,y+0*s,1*s,1*s);
+      cx.fillStyle='#44FF44';cx.fillRect(x-1*s,y+1*s,1*s,1*s);
+      break;
+    case 'wellness':// Lotus 🧘
+      cx.fillStyle='#4ade80';cx.fillRect(x-1*s,y+1*s,2*s,2*s);// stem
+      cx.fillStyle='#e879f9';cx.fillRect(x-2*s,y-2*s,1*s,3*s);cx.fillRect(x+1*s,y-2*s,1*s,3*s);// petals
+      cx.fillStyle='#ff69b4';cx.fillRect(x-1*s,y-3*s,2*s,2*s);// center
+      break;
+    case 'social':// People 👥
+      cx.fillStyle='#e879f9';cx.fillRect(x-2*s,y-2*s,2*s,2*s);// head1
+      cx.fillRect(x-3*s,y+0*s,3*s,3*s);// body1
+      cx.fillStyle='#a78bfa';cx.fillRect(x+1*s,y-2*s,2*s,2*s);// head2
+      cx.fillRect(x+0*s,y+0*s,3*s,3*s);// body2
+      break;
+    case 'popup':// Lightning ⚡
+      cx.fillStyle='#ff9f43';cx.fillRect(x+0*s,y-3*s,2*s,2*s);
+      cx.fillRect(x-1*s,y-1*s,3*s,1*s);
+      cx.fillRect(x-1*s,y+0*s,2*s,2*s);
+      cx.fillRect(x-2*s,y+2*s,2*s,1*s);
+      break;
+    case 'virtual':// Wifi 📡
+      cx.fillStyle='#78ffd6';cx.fillRect(x-0*s,y+1*s,1*s,2*s);// antenna
+      if(fr%24<12){cx.fillRect(x-2*s,y-1*s,5*s,1*s);}
+      if(fr%24<18){cx.fillRect(x-3*s,y-3*s,7*s,1*s);}
+      break;
+    default:// Generic diamond
+      cx.fillRect(x-2*s,y-1*s,4*s,2*s);cx.fillRect(x-1*s,y-2*s,2*s,4*s);
+  }
+}
+
 function dM(v){
   if(!vis(v))return;
   const x=(v.c||0)*TS+TS/2,y=(v.r||0)*TS+TS/2,cC=CC[v.cat]||'#fff',sC=SC[v.src]||cC;
-  const p=Math.sin(fr*.05+v.id*1.3)*2,sz=6+p;
-  const g=cx.createRadialGradient(x,y,0,x,y,sz*3);g.addColorStop(0,sC+'50');g.addColorStop(1,sC+'00');
-  cx.fillStyle=g;cx.fillRect(x-sz*3,y-sz*3,sz*6,sz*6);
-  cx.fillStyle='rgba(0,0,0,.5)';cx.fillRect(x-sz*.6+1,y-sz+1,sz*1.2,sz*2);
-  cx.fillStyle=cC;cx.beginPath();cx.moveTo(x,y-sz);cx.lineTo(x+sz*.6,y);cx.lineTo(x,y+sz);cx.lineTo(x-sz*.6,y);cx.closePath();cx.fill();
-  cx.fillStyle=sC+'66';cx.beginPath();cx.moveTo(x,y-sz*.4);cx.lineTo(x+sz*.25,y);cx.lineTo(x,y+sz*.4);cx.lineTo(x-sz*.25,y);cx.closePath();cx.fill();
-  cx.fillStyle='rgba(0,0,0,.5)';cx.fillRect(x-1,y-1,2,2);
-  if(sel&&sel.id===v.id){cx.strokeStyle='#fff';cx.lineWidth=1.5;cx.setLineDash([3,2]);cx.beginPath();cx.arc(x,y,sz+4,0,Math.PI*2);cx.stroke();cx.setLineDash([])}
+  const bounce=Math.sin(fr*.05+v.id*1.3)*1.5;
+  const yy=y+bounce;
+  const sz=8;
+
+  // Glow aura
+  const g=cx.createRadialGradient(x,yy,0,x,yy,sz*2.5);
+  g.addColorStop(0,sC+'40');g.addColorStop(1,sC+'00');
+  cx.fillStyle=g;cx.fillRect(x-sz*2.5,yy-sz*2.5,sz*5,sz*5);
+
+  // Shadow
+  cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(x-3,y+sz-1,6,2);
+
+  // Pin base (source-colored)
+  cx.fillStyle=sC;cx.fillRect(x-4,yy-sz-2,8,sz+4);
+  cx.fillStyle=sC+'88';cx.fillRect(x-3,yy-sz-1,6,sz+2);
+
+  // Icon
+  cx.fillStyle=cC;
+  drawIcon(cx,x,yy-3,v.cat,sz);
+
+  // Source badge dot
+  cx.fillStyle=sC;cx.fillRect(x-1,yy+sz-3,3,3);
+
+  // Selection ring
+  if(sel&&sel.id===v.id){
+    cx.strokeStyle='#fff';cx.lineWidth=1.5;cx.setLineDash([3,2]);
+    cx.beginPath();cx.arc(x,yy,sz+5,0,Math.PI*2);cx.stroke();cx.setLineDash([]);
+  }
 }
 
-function dVB(){const x=50*TS,w=(CO-50)*TS,h=RO*TS;const a=.3+Math.sin(fr*.03)*.1;cx.strokeStyle=`rgba(100,220,200,${a})`;cx.lineWidth=2;cx.setLineDash([4,3]);cx.strokeRect(x+1,1,w-2,h-2);cx.setLineDash([])}
+function dVB(){const x=(CO-6)*TS,w=6*TS,h=RO*TS;const a=.3+Math.sin(fr*.03)*.1;cx.strokeStyle=`rgba(100,220,200,${a})`;cx.lineWidth=2;cx.setLineDash([4,3]);cx.strokeRect(x+1,1,w-2,h-2);cx.setLineDash([])}
 function dNi(){cx.fillStyle='rgba(0,4,20,.35)';cx.fillRect(0,0,cv.width,cv.height)}
 
 // ═══ MINIMAP ═══
@@ -617,7 +915,7 @@ function drawMinimap(){
   mmCx.fillStyle=nit?'#050a12':'#90b8d8';mmCx.fillRect(0,0,CO,RO);
   for(let r=0;r<RO;r++)for(let c=0;c<CO;c++){
     const t=MAP[r][c];
-    mmCx.fillStyle=t===T.P?(nit?'#0a2006':'#3a8028'):t===T.W?(nit?'#041830':'#4090d0'):t===T.M?(nit?'#302000':'#d4a830'):t===T.R?(nit?'#2a2218':'#c8a87a'):t===T.V?(nit?'#020508':'#060f1a'):(nit?'#1a1008':'#b08060');
+    mmCx.fillStyle=t===T.P?(nit?'#0a2006':'#3a8028'):t===T.W?(nit?'#041830':'#4090d0'):t===T.M?(nit?'#302000':'#d4a830'):t===T.R?(nit?'#2a2218':'#c8a87a'):t===T.V?(nit?'#020508':'#060f1a'):t===T.G?(nit?'#0a1208':'#607848'):(nit?'#1a1008':'#b08060');
     mmCx.fillRect(c,r,1,1);
   }
   V.forEach(v=>{if(!vis(v))return;mmCx.fillStyle=CC[v.cat]||'#fff';mmCx.fillRect(v.c||0,v.r||0,2,2)});
@@ -631,11 +929,14 @@ function drawMinimap(){
 // ═══ RENDER ═══
 function render(){
   fr++;cx.fillStyle=nit?'#050a12':(rain?'#7898a8':'#90b8d8');cx.fillRect(0,0,cv.width,cv.height);
+  cx.save();cx.translate(ofsX,ofsY);
   for(let r=0;r<RO;r++)for(let c=0;c<CO;c++)drawTile(r,c,MAP[r][c]);
-  dVB();dL();drawDogs();drawAutos();drawMetro();drawLandmarks();drawTrafficSignals();
-  if(nit)dNi();drawBirds();drawRain();drawParticles();
+  drawZoneBorders();dVB();dL();drawDogs();drawAutos();drawMetro();drawLandmarks();drawTrafficSignals();
+  drawBirds();drawRain();drawParticles();
   V.forEach(v=>dM(v));
   if(sel)drawStreetView(sel);
+  cx.restore();
+  if(nit)dNi();
   if(fr%10===0)drawMinimap();
   requestAnimationFrame(render);
 }
@@ -644,13 +945,13 @@ function render(){
 cv.addEventListener('click',e=>{
   if(dragging)return;
   const rc=cv.getBoundingClientRect();const sx=cv.width/rc.width,sy=cv.height/rc.height;
-  const mx=(e.clientX-rc.left)*sx,my=(e.clientY-rc.top)*sy;
+  const mx=(e.clientX-rc.left)*sx-ofsX,my=(e.clientY-rc.top)*sy-ofsY;
   let hit=null;V.forEach(v=>{if(!vis(v))return;const vx=(v.c||0)*TS+TS/2,vy=(v.r||0)*TS+TS/2;if(Math.hypot(mx-vx,my-vy)<18)hit=v});
   if(hit){sel=hit;openP(hit);panTo((hit.c||0)*TS,(hit.r||0)*TS)}else{sel=null;closeP()}
 });
 cv.addEventListener('mousemove',e=>{
   const rc=cv.getBoundingClientRect();const sx=cv.width/rc.width,sy=cv.height/rc.height;
-  const mx=(e.clientX-rc.left)*sx,my=(e.clientY-rc.top)*sy;
+  const mx=(e.clientX-rc.left)*sx-ofsX,my=(e.clientY-rc.top)*sy-ofsY;
   const tt=document.getElementById('tt');let hov=null;
   V.forEach(v=>{if(!vis(v))return;const vx=(v.c||0)*TS+TS/2,vy=(v.r||0)*TS+TS/2;if(Math.hypot(mx-vx,my-vy)<18)hov=v});
   if(hov){cv.style.cursor='pointer';tt.innerHTML=`<b style="color:${CC[hov.cat]}">${hov.nm.replace('\n','<br>')}</b><br><span style="color:${SC[hov.src]};font-size:4px">${SN[hov.src]}</span><br><span style="color:#5a7a9a">${hov.ev.length} events</span>`;

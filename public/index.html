@@ -153,14 +153,14 @@ footer a:hover{color:#ffe8a0}
     <span class="cta-icon">🏙️</span>
     <div class="cta-title" style="color:#78ffd6">SUBMIT YOUR CITY</div>
     <div class="cta-desc">Know cool event sources in your city?<br>Drop them here — once we have enough sources, we'll build the map.</div>
-    <a class="cta-btn submit" href="https://forms.gle/YOUR_CITY_FORM_ID" target="_blank">▸ ADD SOURCES</a>
+    <a class="cta-btn submit" href="/submit">▸ ADD SOURCES</a>
     <div class="cta-hint">DELHI · HYDERABAD · CHENNAI · PUNE · KOLKATA · YOUR CITY?</div>
   </div>
   <div class="cta-card">
     <span class="cta-icon">💬</span>
     <div class="cta-title" style="color:#e879f9">DROP FEEDBACK</div>
     <div class="cta-desc">Found a bug? Have ideas? Want a feature?<br>Tell us what you think — we actually read these.</div>
-    <a class="cta-btn feedback" href="https://forms.gle/YOUR_FEEDBACK_FORM_ID" target="_blank">▸ SEND FEEDBACK</a>
+    <a class="cta-btn feedback" href="/feedback">▸ SEND FEEDBACK</a>
     <div class="cta-hint">NO GITHUB ACCOUNT NEEDED · ANONYMOUS OK</div>
   </div>
 </div>
@@ -265,9 +265,17 @@ const mumPalette={
 };
 const mumShape=(r,c,rows,cols)=>{
   const nr=r/rows,nc=c/cols;
-  if(nc>0.55&&nc<0.85&&nr>0.35&&nr<0.8)return true; // Navi Mumbai
-  const maxW=nr<0.7?0.45:0.45-((nr-0.7)*1.2); // Narrowing peninsula
-  return nc>0.08&&nc<maxW&&nr>0.1;
+  // Navi Mumbai (east block, separated by creek)
+  if(nc>0.58&&nc<0.85&&nr>0.35&&nr<0.75)return true;
+  // Main peninsula: wide in north, narrows progressively to south tip
+  let westEdge=0.06, eastEdge;
+  if(nr<0.25) eastEdge=0.50;       // North: Borivali-Goregaon (wide)
+  else if(nr<0.45) eastEdge=0.48;  // Mid-north: Andheri-Bandra
+  else if(nr<0.60) eastEdge=0.40;  // Mid: Dadar-Worli
+  else if(nr<0.75) eastEdge=0.32;  // Lower: Malabar Hill-Marine Drive
+  else if(nr<0.85) eastEdge=0.25;  // Fort/CST area
+  else { eastEdge=0.20; westEdge=0.12; } // Colaba tip (very narrow)
+  return nc>westEdge&&nc<eastEdge&&nr>0.08;
 };
 
 // Delhi: WIP (greyed out, construction vibe)

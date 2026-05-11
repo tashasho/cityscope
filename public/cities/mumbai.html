@@ -113,7 +113,7 @@ body{background:var(--bg);font-family:'Silkscreen','Courier New',monospace;color
   <button class="fb" style="border-color:#4ade80;color:#4ade80" onclick="sF('social',this)">SOCIAL</button>
 </div>
 <script>
-const TS=14,CO=40,RO=52;
+const TS=12,CO=50,RO=60;
 let nit=false,flt='all',fr=0,sel=null,tM=10*60,rain=false;
 let zoom=1,panX=0,panY=0,dragging=false,dsx=0,dsy=0;
 const T={S:0,R:1,B:2,P:3,W:4,M:5};
@@ -122,62 +122,134 @@ const SC={bms:'#ef4444',luma:'#a78bfa',district:'#ef4444',allevents:'#f97316',ec
 const SN={bms:'BOOKMYSHOW',luma:'LUMA',district:'DISTRICT',allevents:'ALLEVENTS',echai:'ECHAI',meetup:'MEETUP',timeout:'TIMEOUT',sortmyscene:'SORTMYSCENE',townscript:'TOWNSCRIPT'};
 function H(r,c){return(r*73856093^c*19349663)&0x7FFFFFFF}
 
-// Mumbai bounding box (peninsula shape: tall narrow)
+// Mumbai bounding box
 const MUM={n:19.28,s:18.88,w:72.77,e:73.05};
 function geo(lat,lng){return{c:Math.round((lng-MUM.w)/(MUM.e-MUM.w)*(CO-2))+1,r:Math.round((MUM.n-lat)/(MUM.n-MUM.s)*(RO-2))+1}}
-
-// Mumbai's distinctive peninsula map
-function mk(){
-  const m=Array.from({length:RO},()=>Array(CO).fill(T.W)); // Start with sea
-  // Land mass: Mumbai is a narrow peninsula running north-south
-  // South Mumbai (narrow tip)
-  for(let r=38;r<=50;r++)for(let c=5;c<=15;c++)if(H(r,c)%6!==0||c>7&&c<14)m[r][c]=T.B;
-  // Mid-Mumbai (Bandra to Dadar, widens)
-  for(let r=26;r<=38;r++)for(let c=3;c<=18;c++)m[r][c]=T.B;
-  // Bandra-Kurla-Powai (east expansion)
-  for(let r=22;r<=30;r++)for(let c=3;c<=25;c++)m[r][c]=T.B;
-  // North Mumbai (Andheri to Goregaon, wide)
-  for(let r=12;r<=22;r++)for(let c=2;c<=22;c++)m[r][c]=T.B;
-  // Far North (Borivali to Thane)
-  for(let r=2;r<=12;r++)for(let c=2;c<=20;c++)m[r][c]=T.B;
-  // Navi Mumbai (east side, across creek)
-  for(let r=18;r<=35;r++)for(let c=28;c<=38;c++)m[r][c]=T.B;
-  // Thane Creek (water gap)
-  for(let r=10;r<=35;r++)for(let c=22;c<=27;c++)m[r][c]=T.W;
-  // Arabian Sea cleanup (western coast)
-  for(let r=0;r<RO;r++){m[r][0]=T.W;m[r][1]=T.W;if(r>38)for(let c=0;c<=4;c++)m[r][c]=T.W;if(r>44)for(let c=0;c<=7;c++)m[r][c]=T.W;if(r>48)for(let c=0;c<=9;c++)m[r][c]=T.W}
-  // Roads
-  [5,10,15,20,25,30,35,40,45].forEach(r=>{for(let c=0;c<CO;c++)if(m[r][c]===T.B)m[r][c]=T.R});
-  [5,10,15,20,30,35].forEach(c=>{for(let r=0;r<RO;r++)if(m[r][c]===T.B)m[r][c]=T.R});
-  // Parks
-  // Sanjay Gandhi National Park (huge, north)
-  for(let r=2;r<=8;r++)for(let c=3;c<=10;c++)m[r][c]=T.P;
-  // Aarey Colony
-  for(let r=9;r<=12;r++)for(let c=11;c<=15;c++)m[r][c]=T.P;
-  // Shivaji Park (Dadar)
-  for(let r=32;r<=34;r++)for(let c=6;c<=9;c++)m[r][c]=T.P;
-  // Oval Maidan (Fort)
-  for(let r=44;r<=46;r++)for(let c=8;c<=10;c++)m[r][c]=T.P;
-  // Markets
-  // BKC commercial
-  for(let r=26;r<=29;r++)for(let c=14;c<=19;c++)m[r][c]=T.M;
-  // Lower Parel
-  for(let r=34;r<=37;r++)for(let c=6;c<=10;c++)m[r][c]=T.M;
-  // Colaba Causeway
-  for(let c=9;c<=12;c++){m[48][c]=T.M;m[49][c]=T.M}
-  // Andheri commercial
-  for(let r=16;r<=19;r++)for(let c=6;c<=12;c++)m[r][c]=T.M;
-  return m;
+function tileToGeo(r,c){return{lat:MUM.n-(r-1)/(RO-2)*(MUM.n-MUM.s),lng:MUM.w+(c-1)/(CO-2)*(MUM.e-MUM.w)}}
+function ptInPoly(lat,lng,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const yi=poly[i][0],xi=poly[i][1],yj=poly[j][0],xj=poly[j][1];
+    if(((yi>lat)!==(yj>lat))&&(lng<(xj-xi)*(lat-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
 }
-const MAP=mk();
 
-function getZone(r,c){if(r>=40)return 0;if(r>=32)return 1;if(r>=24&&c>=14)return 2;if(r>=14)return 3;if(c>=28)return 4;return 3}
+// ═══ REAL ROAD NETWORK ═══
+const ROADS=[
+  {nm:'Western Express Highway',pts:[[19.22,72.85],[19.18,72.85],[19.14,72.85],[19.10,72.85],[19.06,72.84],[19.02,72.84]]},
+  {nm:'Eastern Express Highway',pts:[[19.20,72.88],[19.16,72.88],[19.12,72.87],[19.08,72.86],[19.04,72.86]]},
+  {nm:'SV Road',pts:[[19.20,72.84],[19.16,72.84],[19.12,72.84],[19.08,72.83],[19.06,72.83]]},
+  {nm:'LBS Marg',pts:[[19.18,72.89],[19.14,72.88],[19.10,72.87],[19.06,72.86]]},
+  {nm:'Link Road',pts:[[19.18,72.83],[19.14,72.83],[19.10,72.83],[19.08,72.83]]},
+  {nm:'Marine Drive',pts:[[18.94,72.82],[18.93,72.82],[18.92,72.83]]},
+  {nm:'Worli Sea Link',pts:[[19.03,72.82],[18.99,72.82],[18.97,72.81]]},
+  {nm:'Sion-Panvel Highway',pts:[[19.04,72.86],[19.03,72.89],[19.02,72.92],[19.01,72.95]]},
+  {nm:'Palm Beach Road',pts:[[19.05,72.99],[19.03,73.00],[19.01,73.01],[18.99,73.02]]},
+  {nm:'Vashi Bridge',pts:[[19.06,72.87],[19.06,72.92],[19.06,72.97]]},
+  {nm:'Pedder Road',pts:[[18.97,72.81],[18.96,72.82],[18.95,72.82],[18.94,72.83]]}
+];
+
+// ═══ REAL PARKS & LAKES ═══
+const PARKS=[
+  {nm:'SGNP',poly:[[19.24,72.86],[19.24,72.91],[19.20,72.91],[19.20,72.86]]},
+  {nm:'Aarey Colony',poly:[[19.16,72.86],[19.16,72.89],[19.13,72.89],[19.13,72.86]]},
+  {nm:'Shivaji Park',poly:[[19.03,72.83],[19.03,72.84],[19.02,72.84],[19.02,72.83]]},
+  {nm:'Oval Maidan',poly:[[18.93,72.83],[18.93,72.84],[18.925,72.84],[18.925,72.83]]}
+];
+const LAKES=[
+  {nm:'Powai Lake',poly:[[19.13,72.90],[19.13,72.92],[19.12,72.92],[19.12,72.90]]},
+  {nm:'Vihar Lake',poly:[[19.15,72.91],[19.15,72.93],[19.14,72.93],[19.14,72.91]]}
+];
+const MARKETS=[
+  {nm:'BKC',poly:[[19.06,72.86],[19.06,72.88],[19.04,72.88],[19.04,72.86]]},
+  {nm:'Lower Parel',poly:[[18.99,72.82],[18.99,72.84],[18.98,72.84],[18.98,72.82]]},
+  {nm:'Colaba Causeway',poly:[[18.92,72.83],[18.92,72.84],[18.91,72.84],[18.91,72.83]]},
+  {nm:'Andheri Commercial',poly:[[19.12,72.84],[19.12,72.87],[19.10,72.87],[19.10,72.84]]}
+];
+
+// ═══ NEIGHBORHOOD ZONES ═══
+const ZONES=[
+  {nm:'Colaba/Fort',poly:[[18.93,72.82],[18.93,72.84],[18.90,72.84],[18.90,72.82]],pal:0},
+  {nm:'Marine Drive',poly:[[18.95,72.81],[18.95,72.83],[18.93,72.83],[18.93,72.81]],pal:0},
+  {nm:'Worli/LP',poly:[[19.00,72.81],[19.00,72.84],[18.96,72.84],[18.96,72.81]],pal:1},
+  {nm:'Bandra',poly:[[19.07,72.82],[19.07,72.86],[19.04,72.86],[19.04,72.82]],pal:1},
+  {nm:'BKC',poly:[[19.07,72.86],[19.07,72.89],[19.04,72.89],[19.04,72.86]],pal:2},
+  {nm:'Andheri',poly:[[19.14,72.82],[19.14,72.88],[19.10,72.88],[19.10,72.82]],pal:3},
+  {nm:'Powai',poly:[[19.13,72.89],[19.13,72.93],[19.10,72.93],[19.10,72.89]],pal:2},
+  {nm:'Goregaon/Malad',poly:[[19.18,72.82],[19.18,72.88],[19.14,72.88],[19.14,72.82]],pal:3},
+  {nm:'Borivali',poly:[[19.24,72.83],[19.24,72.89],[19.18,72.89],[19.18,72.83]],pal:3},
+  {nm:'Navi Mumbai',poly:[[19.08,72.97],[19.08,73.04],[18.98,73.04],[18.98,72.97]],pal:4}
+];
+
+function getZone(r,c){
+  const g=tileToGeo(r,c);
+  for(let i=0;i<ZONES.length;i++){if(ptInPoly(g.lat,g.lng,ZONES[i].poly))return ZONES[i].pal;}
+  if(r>=40)return 0;if(r>=32)return 1;if(r>=24&&c>=14)return 2;if(r>=14)return 3;return 3;
+}
 
 const BPAL_D=[['#d0a080','#c09070','#e0b090'],['#b87050','#c88060','#a86040'],['#6888a8','#7898b8','#5878a0'],['#c89068','#d8a078','#b88058'],['#d0b898','#c0a888','#e0c8a8']];
 const BPAL_N=[['#2a1a10','#3a2418','#1e1008'],['#2e1808','#3a200c','#221004'],['#14202c','#1a2838','#101820'],['#221a0c','#2c2010','#1c1408'],['#2a2418','#342c20','#201c10']];
 const PD={0:['#1a3040','#204050','#183848'],1:['#c0a07a','#b89068','#d0b088'],3:['#3a8a30','#4a9e38','#2e7020'],4:['#3888c8','#4898d8','#2878b8'],5:['#c89820','#d8a830','#b88818']};
 const PN={0:['#060e18','#081220','#041018'],1:['#302818','#3c3020','#282010'],3:['#0a2006','#0e2808','#082004'],4:['#041830','#061e3a','#031028'],5:['#302000','#3a2604','#281800']};
 function tCol(r,c,t){if(t===T.B){const z=getZone(r,c);return(nit?BPAL_N:BPAL_D)[z][H(r,c)%(nit?BPAL_N:BPAL_D)[z].length]}return((nit?PN:PD)[t]||['#888'])[H(r,c)%((nit?PN:PD)[t]||['#888']).length]}
+
+// ═══ MAP GENERATION (geographically accurate peninsula) ═══
+function mk(){
+  const m=Array.from({length:RO},()=>Array(CO).fill(T.W)); // Arabian Sea default
+
+  // Peninsula shape (preserved from original, adjusted for new grid)
+  // Far North: Borivali/Dahisar
+  for(let r=2;r<=10;r++)for(let c=3;c<=24;c++)m[r][c]=T.B;
+  // North: Goregaon/Malad
+  for(let r=11;r<=16;r++)for(let c=3;c<=25;c++)m[r][c]=T.B;
+  // Upper-Mid: Andheri/Jogeshwari
+  for(let r=17;r<=23;r++)for(let c=3;c<=26;c++)m[r][c]=T.B;
+  // Juhu beach jut-out
+  for(let r=22;r<=26;r++)for(let c=2;c<=3;c++)m[r][c]=T.B;
+  // Mid: Bandra/Khar/Santacruz
+  for(let r=24;r<=30;r++)for(let c=4;c<=24;c++)m[r][c]=T.B;
+  // BKC extends east
+  for(let r=29;r<=34;r++)for(let c=16;c<=26;c++)m[r][c]=T.B;
+  // Mid-South: Dadar/Matunga/Sion
+  for(let r=31;r<=40;r++)for(let c=6;c<=20;c++)m[r][c]=T.B;
+  // Lower Parel / Worli
+  for(let r=41;r<=46;r++)for(let c=6;c<=17;c++)m[r][c]=T.B;
+  // Worli Sea Face
+  for(let r=41;r<=44;r++){m[r][5]=T.B;}
+  // Malabar Hill / Breach Candy
+  for(let r=47;r<=51;r++)for(let c=7;c<=16;c++)m[r][c]=T.B;
+  // Marine Drive / Fort / CST
+  for(let r=52;r<=55;r++)for(let c=8;c<=15;c++)m[r][c]=T.B;
+  // South Mumbai: Nariman Point/Colaba
+  for(let r=56;r<=57;r++)for(let c=10;c<=14;c++)m[r][c]=T.B;
+  for(let r=58;r<=59;r++)for(let c=11;c<=13;c++)m[r][c]=T.B;
+
+  // Navi Mumbai
+  for(let r=20;r<=42;r++)for(let c=33;c<=46;c++)m[r][c]=T.B;
+  // Thane Creek
+  for(let r=12;r<=46;r++)for(let c=27;c<=32;c++)m[r][c]=T.W;
+
+  // Stamp parks
+  PARKS.forEach(p=>{for(let r=0;r<RO;r++)for(let c=0;c<CO;c++){const g=tileToGeo(r,c);if(ptInPoly(g.lat,g.lng,p.poly)&&m[r][c]===T.B)m[r][c]=T.P;}});
+  // Stamp lakes
+  LAKES.forEach(l=>{for(let r=0;r<RO;r++)for(let c=0;c<CO;c++){const g=tileToGeo(r,c);if(ptInPoly(g.lat,g.lng,l.poly))m[r][c]=T.W;}});
+  // Stamp markets
+  MARKETS.forEach(mk=>{for(let r=0;r<RO;r++)for(let c=0;c<CO;c++){const g=tileToGeo(r,c);if(ptInPoly(g.lat,g.lng,mk.poly)&&m[r][c]===T.B)m[r][c]=T.M;}});
+
+  // Draw real roads
+  ROADS.forEach(rd=>{
+    for(let i=0;i<rd.pts.length-1;i++){
+      const a=geo(rd.pts[i][0],rd.pts[i][1]),b=geo(rd.pts[i+1][0],rd.pts[i+1][1]);
+      const steps=Math.max(Math.abs(b.c-a.c),Math.abs(b.r-a.r))*2+1;
+      for(let s=0;s<=steps;s++){const t=s/steps;const rc=Math.round(a.r+(b.r-a.r)*t),cc=Math.round(a.c+(b.c-a.c)*t);
+        if(rc>=0&&rc<RO&&cc>=0&&cc<CO&&m[rc][cc]===T.B)m[rc][cc]=T.R;}
+    }
+  });
+
+  return m;
+}
+const MAP=mk();
 
 // ═══ ALL VENUES (real Mumbai coordinates) ═══
 const V=[
@@ -345,45 +417,79 @@ function drawTile(r,c,t){
 }
 
 // ═══ LABELS ═══
-const LB=[{t:"COLABA",x:9,y:49,s:5},{t:"FORT/CST",x:9,y:44,s:5},{t:"MARINE DRIVE",x:6,y:42,s:5},{t:"NARIMAN PT",x:6,y:46,s:5},{t:"WORLI",x:5,y:36,s:5},{t:"LOWER PAREL",x:6,y:34,s:5},{t:"DADAR",x:8,y:31,s:5},{t:"BANDRA W",x:4,y:27,s:5},{t:"BKC",x:14,y:27,s:6},{t:"ANDHERI",x:5,y:18,s:5},{t:"JUHU",x:3,y:20,s:5},{t:"POWAI",x:16,y:16,s:5},{t:"GOREGAON",x:5,y:14,s:5},{t:"MALAD",x:5,y:10,s:5},{t:"BORIVALI",x:5,y:6,s:5},{t:"SGNP",x:4,y:3,s:6},{t:"NAVI MUMBAI",x:29,y:26,s:5},{t:"THANE",x:29,y:18,s:5},{t:"SION",x:12,y:33,s:5},{t:"MATUNGA",x:10,y:32,s:5}];
-const VIBES=[{t:'"Bollywood dreams"',x:6,y:20,c:'#ff69b4'},{t:'"pav bhaji heaven"',x:4,y:22,c:'#ffd700'},{t:'"corporate BKC"',x:15,y:28,c:'#00bcd4'},{t:'"hipster Bandra"',x:4,y:28,c:'#e879f9'},{t:'"old money SoBo"',x:8,y:45,c:'#ffd700'},{t:'"local trains!"',x:9,y:38,c:'#ff9f43'},{t:'"sea breeze"',x:3,y:40,c:'#60a5fa'}];
-function dL(){LB.forEach(l=>{cx.font=`${l.s}px 'Silkscreen',monospace`;cx.fillStyle=nit?'rgba(255,208,60,.3)':'rgba(255,250,200,.55)';cx.fillText(l.t,l.x*TS+1,l.y*TS+TS-2)});VIBES.forEach(v=>{cx.font=`italic 4px 'Courier New',monospace`;cx.fillStyle=(nit?v.c+'25':v.c+'40');cx.fillText(v.t,v.x*TS,v.y*TS+TS-1)})}
+const LB=[
+  {t:"COLABA",lat:18.906,lng:72.812,s:4},{t:"FORT/CST",lat:18.93,lng:72.835,s:4},
+  {t:"MARINE DRIVE",lat:18.943,lng:72.823,s:4},{t:"NARIMAN PT",lat:18.925,lng:72.82,s:4},
+  {t:"WORLI",lat:18.97,lng:72.815,s:4},{t:"LOWER PAREL",lat:18.995,lng:72.83,s:4},
+  {t:"DADAR",lat:19.02,lng:72.84,s:4},{t:"BANDRA W",lat:19.06,lng:72.83,s:4},
+  {t:"BKC",lat:19.06,lng:72.865,s:5},{t:"ANDHERI",lat:19.12,lng:72.845,s:4},
+  {t:"JUHU",lat:19.10,lng:72.825,s:4},{t:"POWAI",lat:19.12,lng:72.905,s:4},
+  {t:"GOREGAON",lat:19.16,lng:72.845,s:4},{t:"MALAD",lat:19.18,lng:72.845,s:4},
+  {t:"BORIVALI",lat:19.22,lng:72.855,s:4},{t:"SGNP",lat:19.23,lng:72.88,s:5},
+  {t:"NAVI MUMBAI",lat:19.04,lng:72.99,s:4},{t:"THANE",lat:19.18,lng:72.97,s:4},
+  {t:"SION",lat:19.04,lng:72.86,s:4},{t:"MATUNGA",lat:19.03,lng:72.84,s:4},
+  {t:"MALABAR HILL",lat:18.96,lng:72.81,s:4}
+];
+const VIBES=[
+  {t:'"Bollywood dreams"',lat:19.10,lng:72.827,c:'#ff69b4'},{t:'"pav bhaji heaven"',lat:19.10,lng:72.832,c:'#ffd700'},
+  {t:'"corporate BKC"',lat:19.055,lng:72.867,c:'#00bcd4'},{t:'"hipster Bandra"',lat:19.055,lng:72.835,c:'#e879f9'},
+  {t:'"old money SoBo"',lat:18.935,lng:72.835,c:'#ffd700'},{t:'"local trains!"',lat:19.02,lng:72.845,c:'#ff9f43'},
+  {t:'"sea breeze"',lat:18.97,lng:72.82,c:'#60a5fa'}
+];
+function dL(){
+  LB.forEach(l=>{const p=geo(l.lat,l.lng);cx.font=`${l.s}px 'Silkscreen',monospace`;cx.fillStyle=nit?'rgba(255,208,60,.3)':'rgba(255,250,200,.55)';cx.fillText(l.t,p.c*TS+1,p.r*TS+TS-2)});
+  VIBES.forEach(v=>{const p=geo(v.lat,v.lng);cx.font=`italic 4px 'Courier New',monospace`;cx.fillStyle=(nit?v.c+'25':v.c+'40');cx.fillText(v.t,p.c*TS,p.r*TS+TS-1)});
+}
 
 // ═══ PHASE 2: LIFE ═══
-const AUTOS=[];for(let i=0;i<12;i++){AUTOS.push({r:[5,10,15,20,25,30,35,40][H(i,0)%8],sC:H(i,1)%CO,sp:.7+H(i,2)%3*.3,dir:H(i,3)%2?1:-1,clr:H(i,4)%3})}
+const roadRows=[];for(let r=0;r<RO;r++){let ct=0;for(let c=0;c<CO;c++)if(MAP[r][c]===T.R)ct++;if(ct>2)roadRows.push(r);}
+const AUTOS=[];for(let i=0;i<12;i++){AUTOS.push({r:roadRows[H(i,0)%roadRows.length],sC:H(i,1)%CO,sp:.7+H(i,2)%3*.3,dir:H(i,3)%2?1:-1,clr:H(i,4)%3})}
 function drawAutos(){AUTOS.forEach(a=>{const px=((a.sC*TS+fr*a.sp*a.dir+CO*TS*10)%(CO*TS)),py=a.r*TS+2;if(!MAP[a.r]||MAP[a.r][Math.floor(px/TS)]!==T.R)return;cx.fillStyle=nit?'#1a1a0a':'#111';cx.fillRect(px+1,py,4,2);cx.fillStyle=a.clr===0?(nit?'#2a2a00':'#ffd700'):a.clr===1?(nit?'#0a2a10':'#222'):(nit?'#2a2a00':'#ffa500');cx.fillRect(px,py+2,6,3);cx.fillStyle=nit?'rgba(255,255,200,.4)':'rgba(200,230,255,.5)';cx.fillRect(px+(a.dir>0?4:0),py+2,2,2)})}
 function drawBirds(){[{y:1,sp:.5,sz:4,o:0},{y:0,sp:.3,sz:3,o:150}].forEach(f=>{const bx=((fr*f.sp+f.o)%(CO*TS+100))-50;cx.fillStyle=nit?'rgba(200,200,200,.3)':'rgba(40,30,20,.4)';for(let b=0;b<f.sz;b++){const x=bx-b*5,y=f.y*TS+3+b*2+Math.sin(fr*.15+b)*1.5;cx.fillRect(x-1,y,1,1);cx.fillRect(x,y-1,1,1);cx.fillRect(x+1,y,1,1)}})}
 const DROPS=[];for(let i=0;i<100;i++)DROPS.push({x:Math.random()*CO*TS,y:Math.random()*RO*TS,sp:2+Math.random()*3,ln:2+Math.random()*2});
 function drawRain(){if(!rain)return;cx.fillStyle='rgba(10,15,25,.1)';cx.fillRect(0,0,cv.width,cv.height);cx.strokeStyle=nit?'rgba(100,140,200,.25)':'rgba(140,180,220,.3)';cx.lineWidth=1;DROPS.forEach(d=>{d.y+=d.sp;d.x+=.3;if(d.y>RO*TS){d.y=-8;d.x=Math.random()*CO*TS}cx.beginPath();cx.moveTo(d.x,d.y);cx.lineTo(d.x+.3,d.y+d.ln);cx.stroke()})}
 
-// ═══ PHASE 3: METRO (Mumbai Local) ═══
+// ═══ PHASE 3: METRO (Mumbai Local - real routes) ═══
 function drawMetro(){
-  // Western Line (north-south, col ~7)
-  cx.fillStyle=nit?'rgba(200,60,60,.4)':'rgba(200,60,60,.5)';cx.fillRect(7*TS+6,3*TS,2,47*TS);
-  const wy=((fr*1.5)%(48*TS));cx.fillStyle=nit?'#802020':'#c04040';cx.fillRect(7*TS+3,wy,6,10);
-  // Central Line (col ~12)
-  cx.fillStyle=nit?'rgba(60,60,200,.4)':'rgba(60,60,200,.5)';cx.fillRect(12*TS+6,16*TS,2,34*TS);
-  const cy2=((fr*1.2)%(36*TS))+16*TS;cx.fillStyle=nit?'#202080':'#4040c0';cx.fillRect(12*TS+3,cy2,6,10);
-  // Harbour Line (diagonal to Navi Mumbai)
-  cx.strokeStyle=nit?'rgba(60,180,60,.3)':'rgba(60,180,60,.4)';cx.lineWidth=2;cx.setLineDash([4,3]);
-  cx.beginPath();cx.moveTo(12*TS+7,35*TS);cx.lineTo(28*TS,25*TS);cx.stroke();cx.setLineDash([]);
-  // Metro Line 1 (Andheri-Ghatkopar blue)
-  cx.fillStyle=nit?'rgba(60,160,200,.4)':'rgba(60,160,200,.5)';cx.fillRect(8*TS,18*TS+6,12*TS,2);
+  // Western Line (Churchgate → Dahanu via ~72.83°E)
+  const westPts=[[18.935,72.827],[18.97,72.825],[19.00,72.83],[19.03,72.835],[19.06,72.835],[19.10,72.84],[19.14,72.845],[19.18,72.85],[19.22,72.855]];
+  cx.strokeStyle=nit?'rgba(200,60,60,.4)':'rgba(200,60,60,.5)';cx.lineWidth=2;cx.beginPath();
+  westPts.forEach((p,i)=>{const t=geo(p[0],p[1]);i===0?cx.moveTo(t.c*TS+TS/2,t.r*TS+TS/2):cx.lineTo(t.c*TS+TS/2,t.r*TS+TS/2)});cx.stroke();
+  const wProg=(fr*1.5)%(westPts.length-1);const wI=Math.floor(wProg),wF=wProg-wI;
+  if(wI<westPts.length-1){const a=geo(westPts[wI][0],westPts[wI][1]),b=geo(westPts[wI+1][0],westPts[wI+1][1]);
+    cx.fillStyle=nit?'#802020':'#c04040';cx.fillRect(a.c*TS+(b.c-a.c)*wF*TS,a.r*TS+(b.r-a.r)*wF*TS,6,TS);}
+  // Central Line (CSMT → Kasara/Karjat)
+  const centPts=[[18.94,72.835],[18.97,72.835],[19.02,72.84],[19.05,72.84],[19.08,72.85],[19.12,72.86],[19.16,72.87],[19.20,72.88]];
+  cx.strokeStyle=nit?'rgba(60,60,200,.4)':'rgba(60,60,200,.5)';cx.lineWidth=2;cx.beginPath();
+  centPts.forEach((p,i)=>{const t=geo(p[0],p[1]);i===0?cx.moveTo(t.c*TS+TS/2,t.r*TS+TS/2):cx.lineTo(t.c*TS+TS/2,t.r*TS+TS/2)});cx.stroke();
+  const cProg=(fr*1.2)%(centPts.length-1);const cI=Math.floor(cProg),cF=cProg-cI;
+  if(cI<centPts.length-1){const a=geo(centPts[cI][0],centPts[cI][1]),b=geo(centPts[cI+1][0],centPts[cI+1][1]);
+    cx.fillStyle=nit?'#202080':'#4040c0';cx.fillRect(a.c*TS+(b.c-a.c)*cF*TS,a.r*TS+(b.r-a.r)*cF*TS,6,TS);}
+  // Harbour Line (CST → Panvel via Vashi)
+  const hrbPts=[[18.94,72.835],[19.04,72.855],[19.06,72.87],[19.06,72.92],[19.04,72.97],[19.02,73.00]];
+  cx.strokeStyle=nit?'rgba(60,180,60,.3)':'rgba(60,180,60,.4)';cx.lineWidth=2;cx.setLineDash([4,3]);cx.beginPath();
+  hrbPts.forEach((p,i)=>{const t=geo(p[0],p[1]);i===0?cx.moveTo(t.c*TS+TS/2,t.r*TS+TS/2):cx.lineTo(t.c*TS+TS/2,t.r*TS+TS/2)});cx.stroke();cx.setLineDash([]);
+  // Metro Line 1 (Versova-Ghatkopar, east-west)
+  const m1Pts=[[19.13,72.82],[19.12,72.84],[19.11,72.87],[19.09,72.90]];
+  cx.strokeStyle=nit?'rgba(60,160,200,.4)':'rgba(60,160,200,.5)';cx.lineWidth=2;cx.beginPath();
+  m1Pts.forEach((p,i)=>{const t=geo(p[0],p[1]);i===0?cx.moveTo(t.c*TS+TS/2,t.r*TS+TS/2):cx.lineTo(t.c*TS+TS/2,t.r*TS+TS/2)});cx.stroke();
 }
 
 function drawLandmarks(){
   // Gateway of India (Colaba)
-  let gx=10*TS,gy=49*TS;
+  const gw=geo(18.922,72.835);let gx=gw.c*TS,gy=gw.r*TS;
   cx.fillStyle=nit?'#1a1808':'#c8b890';cx.fillRect(gx+2,gy+3,10,8);
   cx.fillStyle=nit?'#2a2008':'#b0a070';cx.fillRect(gx+4,gy+1,6,3);cx.fillRect(gx+5,gy-1,4,2);cx.fillRect(gx+6,gy-2,2,2);
 
-  // Bandra-Worli Sea Link
+  // Bandra-Worli Sea Link (19.04°N → 18.99°N along ~72.82°E)
+  const slA=geo(19.04,72.815),slB=geo(18.99,72.815),slM=geo(19.015,72.808);
   cx.strokeStyle=nit?'rgba(200,200,200,.3)':'rgba(200,200,200,.5)';cx.lineWidth=2;
-  cx.beginPath();cx.moveTo(6*TS,28*TS);cx.quadraticCurveTo(4*TS,32*TS,6*TS,36*TS);cx.stroke();
+  cx.beginPath();cx.moveTo(slA.c*TS+TS/2,slA.r*TS+TS/2);cx.quadraticCurveTo(slM.c*TS+TS/2,slM.r*TS+TS/2,slB.c*TS+TS/2,slB.r*TS+TS/2);cx.stroke();
   // Suspension cables
+  const slC1=geo(19.03,72.81),slC2=geo(19.005,72.81);
   cx.strokeStyle=nit?'rgba(200,200,200,.15)':'rgba(200,200,200,.25)';cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(5*TS,30*TS);cx.lineTo(5*TS,30*TS-8);cx.stroke();
-  cx.beginPath();cx.moveTo(5*TS,34*TS);cx.lineTo(5*TS,34*TS-8);cx.stroke();
+  cx.beginPath();cx.moveTo(slC1.c*TS+TS/2,slC1.r*TS+TS/2);cx.lineTo(slC1.c*TS+TS/2,slC1.r*TS-6);cx.stroke();
+  cx.beginPath();cx.moveTo(slC2.c*TS+TS/2,slC2.r*TS+TS/2);cx.lineTo(slC2.c*TS+TS/2,slC2.r*TS-6);cx.stroke();
 }
 
 // ═══ PHASE 5: PARTICLES ═══
@@ -394,16 +500,36 @@ function updParticles(){
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0){particles.splice(i,1);continue}const a=Math.min(1,p.life/15);if(p.type==='f'){cx.fillStyle=`rgba(200,255,100,${a*.5+Math.sin(fr*.2+i)*.2})`;cx.fillRect(p.x,p.y,2,2)}else if(p.type==='n'){cx.fillStyle=p.col+Math.round(a*80).toString(16).padStart(2,'0');cx.font='5px serif';cx.fillText('♪',p.x,p.y)}}
 }
 
-// ═══ MARKERS ═══
+// ═══ MARKERS — PIXEL ART ICONS PER CATEGORY ═══
 function vis(v){return flt==='all'||flt===v.src||flt===v.cat}
+
+function drawIcon(cx,x,y,cat,sz){
+  const s=Math.max(1,Math.floor(sz/8));
+  switch(cat){
+    case 'food':cx.fillStyle='#8B4513';cx.fillRect(x-3*s,y-2*s,6*s,5*s);cx.fillStyle='#D2691E';cx.fillRect(x-2*s,y-2*s,4*s,4*s);cx.fillStyle='#FFE4C4';cx.fillRect(x-1*s,y-1*s,2*s,2*s);cx.fillStyle='#8B4513';cx.fillRect(x+3*s,y-1*s,2*s,3*s);if(fr%20<10){cx.fillStyle='rgba(255,255,255,.4)';cx.fillRect(x-1*s,y-4*s,1*s,2*s);cx.fillRect(x+1*s,y-5*s,1*s,2*s);}break;
+    case 'tech':cx.fillStyle='#607898';cx.fillRect(x-3*s,y-2*s,6*s,4*s);cx.fillStyle=nit?'#2040a0':'#90c0ff';cx.fillRect(x-2*s,y-1*s,4*s,2*s);cx.fillStyle='#4a5a6a';cx.fillRect(x-4*s,y+2*s,8*s,1*s);if(fr%30<15){cx.fillStyle='#00ff88';cx.fillRect(x-1*s,y-1*s,1*s,1*s);}break;
+    case 'comedy':cx.fillStyle='#ff69b4';cx.fillRect(x-3*s,y-2*s,6*s,4*s);cx.fillStyle='#fff';cx.fillRect(x-2*s,y-1*s,1*s,1*s);cx.fillRect(x+1*s,y-1*s,1*s,1*s);cx.fillStyle='#333';cx.fillRect(x-2*s,y+1*s,4*s,1*s);cx.fillRect(x-1*s,y+2*s,2*s,1*s);break;
+    case 'music':cx.fillStyle='#c0c0c0';cx.fillRect(x-1*s,y-3*s,2*s,3*s);cx.fillStyle='#888';cx.fillRect(x,y,1*s,3*s);cx.fillStyle='#666';cx.fillRect(x-2*s,y+3*s,4*s,1*s);if(fr%16<8){cx.fillStyle='rgba(255,105,180,.3)';cx.fillRect(x-3*s,y-4*s,1*s,1*s);cx.fillRect(x+2*s,y-3*s,1*s,1*s);}break;
+    case 'art':cx.fillStyle='#D2691E';cx.fillRect(x-3*s,y-2*s,6*s,4*s);cx.fillStyle='#FF4444';cx.fillRect(x-2*s,y-1*s,1*s,1*s);cx.fillStyle='#4444FF';cx.fillRect(x+0*s,y-1*s,1*s,1*s);cx.fillStyle='#FFFF00';cx.fillRect(x+2*s,y+0*s,1*s,1*s);cx.fillStyle='#44FF44';cx.fillRect(x-1*s,y+1*s,1*s,1*s);break;
+    case 'wellness':cx.fillStyle='#4ade80';cx.fillRect(x-1*s,y+1*s,2*s,2*s);cx.fillStyle='#e879f9';cx.fillRect(x-2*s,y-2*s,1*s,3*s);cx.fillRect(x+1*s,y-2*s,1*s,3*s);cx.fillStyle='#ff69b4';cx.fillRect(x-1*s,y-3*s,2*s,2*s);break;
+    case 'social':cx.fillStyle='#e879f9';cx.fillRect(x-2*s,y-2*s,2*s,2*s);cx.fillRect(x-3*s,y+0*s,3*s,3*s);cx.fillStyle='#a78bfa';cx.fillRect(x+1*s,y-2*s,2*s,2*s);cx.fillRect(x+0*s,y+0*s,3*s,3*s);break;
+    case 'sports':cx.fillStyle='#4ade80';cx.fillRect(x-2*s,y-2*s,4*s,4*s);cx.fillStyle='#fff';cx.fillRect(x-1*s,y-3*s,2*s,1*s);cx.fillRect(x-1*s,y+2*s,2*s,1*s);cx.fillRect(x-3*s,y-1*s,1*s,2*s);cx.fillRect(x+2*s,y-1*s,1*s,2*s);break;
+    case 'startup':cx.fillStyle='#f97316';cx.fillRect(x-2*s,y-3*s,4*s,2*s);cx.fillRect(x-1*s,y-1*s,2*s,3*s);cx.fillRect(x-3*s,y+2*s,6*s,1*s);break;
+    case 'virtual':cx.fillStyle='#78ffd6';cx.fillRect(x,y+1*s,1*s,2*s);if(fr%24<12)cx.fillRect(x-2*s,y-1*s,5*s,1*s);if(fr%24<18)cx.fillRect(x-3*s,y-3*s,7*s,1*s);break;
+    default:cx.fillRect(x-2*s,y-1*s,4*s,2*s);cx.fillRect(x-1*s,y-2*s,2*s,4*s);
+  }
+}
+
 function dM(v){
-  if(!vis(v))return;const x=(v.c||0)*TS+TS/2,y=(v.r||0)*TS+TS/2,cC=CC[v.cat]||'#fff',sC=SC[v.src]||cC;
-  const p=Math.sin(fr*.05+v.id*1.3)*2,sz=5+p;
-  const g=cx.createRadialGradient(x,y,0,x,y,sz*3);g.addColorStop(0,sC+'50');g.addColorStop(1,sC+'00');cx.fillStyle=g;cx.fillRect(x-sz*3,y-sz*3,sz*6,sz*6);
-  cx.fillStyle='rgba(0,0,0,.5)';cx.fillRect(x-sz*.6+1,y-sz+1,sz*1.2,sz*2);
-  cx.fillStyle=cC;cx.beginPath();cx.moveTo(x,y-sz);cx.lineTo(x+sz*.6,y);cx.lineTo(x,y+sz);cx.lineTo(x-sz*.6,y);cx.closePath();cx.fill();
-  cx.fillStyle=sC+'55';cx.beginPath();cx.moveTo(x,y-sz*.4);cx.lineTo(x+sz*.25,y);cx.lineTo(x,y+sz*.4);cx.lineTo(x-sz*.25,y);cx.closePath();cx.fill();
-  if(sel&&sel.id===v.id){cx.strokeStyle='#fff';cx.lineWidth=1.5;cx.setLineDash([3,2]);cx.beginPath();cx.arc(x,y,sz+4,0,Math.PI*2);cx.stroke();cx.setLineDash([])}
+  if(!vis(v))return;
+  const x=(v.c||0)*TS+TS/2,y=(v.r||0)*TS+TS/2,cC=CC[v.cat]||'#fff',sC=SC[v.src]||cC;
+  const bounce=Math.sin(fr*.05+v.id*1.3)*1.5;const yy=y+bounce;const sz=8;
+  const g=cx.createRadialGradient(x,yy,0,x,yy,sz*2.5);g.addColorStop(0,sC+'40');g.addColorStop(1,sC+'00');cx.fillStyle=g;cx.fillRect(x-sz*2.5,yy-sz*2.5,sz*5,sz*5);
+  cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(x-3,y+sz-1,6,2);
+  cx.fillStyle=sC;cx.fillRect(x-4,yy-sz-2,8,sz+4);cx.fillStyle=sC+'88';cx.fillRect(x-3,yy-sz-1,6,sz+2);
+  cx.fillStyle=cC;drawIcon(cx,x,yy-3,v.cat,sz);
+  cx.fillStyle=sC;cx.fillRect(x-1,yy+sz-3,3,3);
+  if(sel&&sel.id===v.id){cx.strokeStyle='#fff';cx.lineWidth=1.5;cx.setLineDash([3,2]);cx.beginPath();cx.arc(x,yy,sz+5,0,Math.PI*2);cx.stroke();cx.setLineDash([])}
 }
 
 function dNi(){cx.fillStyle='rgba(0,4,20,.35)';cx.fillRect(0,0,cv.width,cv.height)}

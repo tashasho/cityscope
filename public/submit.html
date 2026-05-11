@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Submit Your City — CITYSCOPE</title>
+<meta name="description" content="Submit event sources for your city. Help us build the next pixel art event map on Cityscope.">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060e18;font-family:'Silkscreen','Courier New',monospace;color:#ffe8a0;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden}
+
+/* Stars */
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(1px 1px at 10% 20%,rgba(255,255,255,.4),transparent),radial-gradient(1px 1px at 30% 60%,rgba(255,255,255,.3),transparent),radial-gradient(1px 1px at 50% 10%,rgba(255,255,255,.5),transparent),radial-gradient(1px 1px at 70% 80%,rgba(255,255,255,.3),transparent),radial-gradient(1px 1px at 90% 40%,rgba(255,255,255,.4),transparent),radial-gradient(1px 1px at 15% 85%,rgba(255,255,255,.3),transparent),radial-gradient(1px 1px at 85% 15%,rgba(255,255,255,.4),transparent);pointer-events:none;z-index:0;animation:twinkle 8s ease-in-out infinite alternate}
+@keyframes twinkle{0%{opacity:.7}50%{opacity:1}100%{opacity:.8}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* Back link */
+.back-link{position:fixed;top:20px;left:20px;z-index:100;font-size:8px;letter-spacing:2px;color:#5a7a9a;text-decoration:none;transition:color .3s,letter-spacing .3s;padding:6px 12px;border:1px solid #1a2e48;background:rgba(6,14,24,.8);backdrop-filter:blur(4px)}
+.back-link:hover{color:#ffe8a0;border-color:#ffe8a066;letter-spacing:3px}
+
+header{text-align:center;padding:60px 20px 10px;position:relative;z-index:1;animation:fadeDown .8s ease-out}
+header h1{font-size:clamp(18px,4vw,32px);letter-spacing:6px;margin-bottom:8px;background:linear-gradient(90deg,#78ffd6 30%,#b8ffe8 50%,#78ffd6 70%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 4s linear infinite}
+header p{font-size:clamp(7px,1.2vw,9px);color:#5a8aaa;letter-spacing:3px;line-height:2}
+.subtitle{font-size:clamp(5px,1vw,7px);color:#3a5a7a;letter-spacing:2px;margin-top:6px;line-height:2.2}
+
+/* Form container */
+.form-wrapper{max-width:560px;width:100%;padding:20px;position:relative;z-index:1;animation:fadeUp .6s ease-out .2s both}
+
+.form-card{background:linear-gradient(180deg,#0c1a2a,#08111c);border:2px solid #1a2e48;padding:28px 24px;position:relative;overflow:hidden}
+.form-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#78ffd6,transparent)}
+
+/* Form elements */
+.field{margin-bottom:20px}
+.field label{display:block;font-size:8px;letter-spacing:2px;color:#78ffd6;margin-bottom:6px}
+.field .required{color:#ff6b6b;margin-left:2px}
+.field .hint{font-size:5px;color:#3a5a7a;letter-spacing:1px;margin-top:4px;line-height:2}
+
+input[type="text"],input[type="email"],input[type="url"],textarea,select{
+  width:100%;padding:10px 12px;background:#040a14;border:2px solid #1a2e48;color:#ffe8a0;
+  font-family:'Silkscreen','Courier New',monospace;font-size:8px;letter-spacing:1px;
+  outline:none;transition:border-color .3s,box-shadow .3s
+}
+input:focus,textarea:focus,select:focus{border-color:#78ffd6;box-shadow:0 0 12px rgba(120,255,214,.1)}
+input::placeholder,textarea::placeholder{color:#2a4460;font-family:inherit}
+textarea{resize:vertical;min-height:80px;line-height:2}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a7a9a'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+select option{background:#0c1a2a;color:#ffe8a0}
+
+/* Checkbox group */
+.checkbox-group{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.checkbox-group label{display:flex;align-items:center;gap:4px;font-size:6px;letter-spacing:1px;color:#7a9ab0;cursor:pointer;padding:4px 8px;border:1px solid #1a2e48;transition:border-color .3s,color .3s,background .3s}
+.checkbox-group label:hover{border-color:#78ffd644;color:#b8ffe8}
+.checkbox-group input[type="checkbox"]{width:10px;height:10px;accent-color:#78ffd6;cursor:pointer}
+.checkbox-group input[type="checkbox"]:checked + span{color:#78ffd6}
+
+/* Submit button */
+.submit-btn{display:block;width:100%;padding:12px;background:none;border:2px solid #78ffd644;color:#78ffd6;font-family:inherit;font-size:9px;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:background .3s,border-color .3s,letter-spacing .3s,box-shadow .3s,transform .2s;margin-top:24px}
+.submit-btn:hover{background:rgba(120,255,214,.06);border-color:#78ffd6;letter-spacing:6px;box-shadow:0 0 25px rgba(120,255,214,.12)}
+.submit-btn:active{transform:scale(.98)}
+
+/* Success state */
+.success-msg{display:none;text-align:center;padding:40px 20px}
+.success-msg.show{display:block;animation:fadeUp .5s ease-out}
+.success-icon{font-size:36px;margin-bottom:12px;display:block}
+.success-title{font-size:14px;letter-spacing:4px;color:#78ffd6;margin-bottom:10px}
+.success-text{font-size:7px;color:#5a8aaa;letter-spacing:1px;line-height:2.4}
+.success-back{display:inline-block;margin-top:16px;padding:8px 20px;border:2px solid #78ffd644;color:#78ffd6;font-family:inherit;font-size:7px;letter-spacing:3px;text-decoration:none;transition:background .3s,letter-spacing .3s}
+.success-back:hover{background:rgba(120,255,214,.06);letter-spacing:5px}
+
+/* Scouting cities tag cloud */
+.scout-cities{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:8px}
+.scout-tag{font-size:5px;padding:2px 6px;border:1px solid #78ffd622;color:#4a8a7a;letter-spacing:1px}
+
+footer{padding:30px;text-align:center;font-size:6px;color:#2a4460;letter-spacing:2px;position:relative;z-index:1;margin-top:auto}
+footer a{color:#4a6a8a;text-decoration:none;transition:color .2s}
+footer a:hover{color:#ffe8a0}
+</style>
+</head>
+<body>
+
+<a href="/" class="back-link">◂ BACK TO MAP</a>
+
+<header>
+  <h1>🏙️ SUBMIT YOUR CITY</h1>
+  <p>HELP US BUILD THE NEXT PIXEL MAP</p>
+  <div class="subtitle">KNOW COOL EVENT SOURCES IN YOUR CITY? DROP THEM HERE — ONCE WE HAVE ENOUGH, WE'LL BUILD THE MAP.</div>
+</header>
+
+<div class="form-wrapper">
+  <div class="form-card">
+
+    <form id="submit-form">
+      <div class="field">
+        <label>CITY NAME <span class="required">*</span></label>
+        <input type="text" id="city-name" placeholder="e.g. Hyderabad, Chennai, Pune..." required>
+        <div class="hint">WHICH CITY SHOULD WE MAP NEXT?</div>
+      </div>
+
+      <div class="field">
+        <label>EVENT SOURCE URLS <span class="required">*</span></label>
+        <textarea id="source-urls" placeholder="Paste URLs of event platforms, one per line...&#10;e.g. https://lu.ma/hyderabad&#10;https://allevents.in/hyderabad&#10;https://insider.in/hyderabad" required></textarea>
+        <div class="hint">WEBSITES, APPS, OR PLATFORMS THAT LIST EVENTS IN YOUR CITY</div>
+      </div>
+
+      <div class="field">
+        <label>NEIGHBORHOODS WORTH MAPPING</label>
+        <textarea id="neighborhoods" placeholder="e.g. Banjara Hills, Jubilee Hills, Hitech City, Gachibowli, Secunderabad..."></textarea>
+        <div class="hint">POPULAR AREAS WHERE EVENTS HAPPEN — HELPS US BUILD ACCURATE MAPS</div>
+      </div>
+
+      <div class="field">
+        <label>EVENT CATEGORIES IN YOUR CITY</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="categories" value="tech"><span>TECH / AI</span></label>
+          <label><input type="checkbox" name="categories" value="music"><span>MUSIC</span></label>
+          <label><input type="checkbox" name="categories" value="comedy"><span>COMEDY</span></label>
+          <label><input type="checkbox" name="categories" value="food"><span>FOOD</span></label>
+          <label><input type="checkbox" name="categories" value="art"><span>ART</span></label>
+          <label><input type="checkbox" name="categories" value="social"><span>SOCIAL</span></label>
+          <label><input type="checkbox" name="categories" value="wellness"><span>WELLNESS</span></label>
+          <label><input type="checkbox" name="categories" value="sports"><span>SPORTS</span></label>
+          <label><input type="checkbox" name="categories" value="startup"><span>STARTUP</span></label>
+        </div>
+        <div class="hint">WHAT KINDS OF EVENTS ARE POPULAR THERE?</div>
+      </div>
+
+      <div class="field">
+        <label>CITY VIBE (OPTIONAL)</label>
+        <input type="text" id="city-vibe" placeholder='e.g. "biryani capital meets tech hub"'>
+        <div class="hint">ONE-LINER THAT CAPTURES YOUR CITY'S PERSONALITY</div>
+      </div>
+
+      <div class="field">
+        <label>YOUR NAME (OPTIONAL)</label>
+        <input type="text" id="submitter-name" placeholder="So we can credit you when the map goes live">
+      </div>
+
+      <div class="field">
+        <label>YOUR EMAIL (OPTIONAL)</label>
+        <input type="email" id="submitter-email" placeholder="We'll notify you when your city launches">
+        <div class="hint">WE WON'T SPAM YOU — JUST A ONE-TIME "YOUR CITY IS LIVE" EMAIL</div>
+      </div>
+
+      <div class="field">
+        <label>ANYTHING ELSE?</label>
+        <textarea id="extra-notes" placeholder="Landmarks, transit lines, local quirks... anything that makes your city unique"></textarea>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submit-btn">▸ SUBMIT CITY SOURCES</button>
+    </form>
+
+    <div class="success-msg" id="success-msg">
+      <span class="success-icon">🎮</span>
+      <div class="success-title">SUBMITTED!</div>
+      <div class="success-text">
+        YOUR CITY SOURCES HAVE BEEN RECORDED.<br>
+        ONCE WE COLLECT ENOUGH DATA, WE'LL BUILD THE PIXEL MAP.<br><br>
+        YOU'RE HELPING EXPAND THE CITYSCOPE UNIVERSE. ◈
+      </div>
+      <a href="/" class="success-back">◂ BACK TO CITYSCOPE</a>
+    </div>
+
+  </div>
+
+  <div class="scout-cities" style="margin-top:16px">
+    <span style="font-size:5px;color:#3a5a7a;letter-spacing:1px;margin-right:4px">CURRENTLY SCOUTING:</span>
+    <span class="scout-tag">DELHI NCR</span>
+    <span class="scout-tag">HYDERABAD</span>
+    <span class="scout-tag">CHENNAI</span>
+    <span class="scout-tag">PUNE</span>
+    <span class="scout-tag">KOLKATA</span>
+    <span class="scout-tag">JAIPUR</span>
+    <span class="scout-tag">AHMEDABAD</span>
+    <span class="scout-tag">KOCHI</span>
+    <span class="scout-tag">GOA</span>
+  </div>
+</div>
+
+<footer>
+  CITYSCOPE v1.0 · <a href="/">HOME</a> · <a href="/feedback">FEEDBACK</a> · <a href="https://github.com/tashasho/cityscope" target="_blank">GITHUB</a> · MIT LICENSE
+</footer>
+
+<script>
+const form = document.getElementById('submit-form');
+const successMsg = document.getElementById('success-msg');
+const submitBtn = document.getElementById('submit-btn');
+
+form.addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  // Collect form data
+  const categories = Array.from(document.querySelectorAll('input[name="categories"]:checked')).map(cb => cb.value);
+  const data = {
+    city: document.getElementById('city-name').value.trim(),
+    sourceUrls: document.getElementById('source-urls').value.trim(),
+    neighborhoods: document.getElementById('neighborhoods').value.trim(),
+    categories: categories,
+    vibe: document.getElementById('city-vibe').value.trim(),
+    name: document.getElementById('submitter-name').value.trim(),
+    email: document.getElementById('submitter-email').value.trim(),
+    notes: document.getElementById('extra-notes').value.trim(),
+    timestamp: new Date().toISOString()
+  };
+
+  // Log to console (for development)
+  console.log('City submission:', data);
+
+  // Submit to Google Form
+  const gFormUrl = 'https://docs.google.com/forms/d/e/1_wvMldzOJKnz0FicaBTV-MAJ50RP4eM9GeNRoMzTn1I/formResponse';
+  const formData = new FormData();
+  formData.append('entry.city', data.city);
+  formData.append('entry.sources', data.sourceUrls);
+  formData.append('entry.neighborhoods', data.neighborhoods);
+  formData.append('entry.categories', data.categories.join(', '));
+  formData.append('entry.vibe', data.vibe);
+  formData.append('entry.name', data.name);
+  formData.append('entry.email', data.email);
+  formData.append('entry.notes', data.notes);
+
+  // Fire-and-forget to Google Forms (CORS won't give us a response, but it still submits)
+  fetch(gFormUrl, { method: 'POST', body: formData, mode: 'no-cors' }).catch(() => {});
+
+  // Show success
+  submitBtn.textContent = '✓ SUBMITTED';
+  submitBtn.style.borderColor = '#78ffd6';
+  submitBtn.style.color = '#b8ffe8';
+  submitBtn.disabled = true;
+
+  setTimeout(() => {
+    form.style.display = 'none';
+    successMsg.classList.add('show');
+  }, 600);
+});
+</script>
+</body>
+</html>

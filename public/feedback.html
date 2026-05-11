@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback — CITYSCOPE</title>
+<meta name="description" content="Share your feedback about Cityscope — report bugs, suggest features, or just say hi. Anonymous submissions welcome.">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060e18;font-family:'Silkscreen','Courier New',monospace;color:#ffe8a0;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden}
+
+/* Stars */
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(1px 1px at 10% 20%,rgba(255,255,255,.4),transparent),radial-gradient(1px 1px at 30% 60%,rgba(255,255,255,.3),transparent),radial-gradient(1px 1px at 50% 10%,rgba(255,255,255,.5),transparent),radial-gradient(1px 1px at 70% 80%,rgba(255,255,255,.3),transparent),radial-gradient(1px 1px at 90% 40%,rgba(255,255,255,.4),transparent),radial-gradient(1px 1px at 15% 85%,rgba(255,255,255,.3),transparent),radial-gradient(1px 1px at 85% 15%,rgba(255,255,255,.4),transparent);pointer-events:none;z-index:0;animation:twinkle 8s ease-in-out infinite alternate}
+@keyframes twinkle{0%{opacity:.7}50%{opacity:1}100%{opacity:.8}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+
+/* Back link */
+.back-link{position:fixed;top:20px;left:20px;z-index:100;font-size:8px;letter-spacing:2px;color:#5a7a9a;text-decoration:none;transition:color .3s,letter-spacing .3s;padding:6px 12px;border:1px solid #1a2e48;background:rgba(6,14,24,.8);backdrop-filter:blur(4px)}
+.back-link:hover{color:#ffe8a0;border-color:#ffe8a066;letter-spacing:3px}
+
+header{text-align:center;padding:60px 20px 10px;position:relative;z-index:1;animation:fadeDown .8s ease-out}
+header h1{font-size:clamp(18px,4vw,32px);letter-spacing:6px;margin-bottom:8px;background:linear-gradient(90deg,#e879f9 30%,#f0abff 50%,#e879f9 70%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 4s linear infinite}
+header p{font-size:clamp(7px,1.2vw,9px);color:#8a6aaa;letter-spacing:3px;line-height:2}
+.subtitle{font-size:clamp(5px,1vw,7px);color:#5a3a7a;letter-spacing:2px;margin-top:6px;line-height:2.2}
+
+/* Form container */
+.form-wrapper{max-width:560px;width:100%;padding:20px;position:relative;z-index:1;animation:fadeUp .6s ease-out .2s both}
+
+.form-card{background:linear-gradient(180deg,#0c1a2a,#08111c);border:2px solid #1a2e48;padding:28px 24px;position:relative;overflow:hidden}
+.form-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#e879f9,transparent)}
+
+/* Form elements */
+.field{margin-bottom:20px}
+.field label{display:block;font-size:8px;letter-spacing:2px;color:#e879f9;margin-bottom:6px}
+.field .required{color:#ff6b6b;margin-left:2px}
+.field .hint{font-size:5px;color:#3a5a7a;letter-spacing:1px;margin-top:4px;line-height:2}
+
+input[type="text"],input[type="email"],textarea,select{
+  width:100%;padding:10px 12px;background:#040a14;border:2px solid #1a2e48;color:#ffe8a0;
+  font-family:'Silkscreen','Courier New',monospace;font-size:8px;letter-spacing:1px;
+  outline:none;transition:border-color .3s,box-shadow .3s
+}
+input:focus,textarea:focus,select:focus{border-color:#e879f9;box-shadow:0 0 12px rgba(232,121,249,.1)}
+input::placeholder,textarea::placeholder{color:#2a4460;font-family:inherit}
+textarea{resize:vertical;min-height:100px;line-height:2}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a7a9a'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+select option{background:#0c1a2a;color:#ffe8a0}
+
+/* Rating stars */
+.rating{display:flex;gap:8px;margin-top:6px}
+.rating label{cursor:pointer;font-size:16px;filter:grayscale(1) brightness(.4);transition:filter .2s,transform .2s}
+.rating label:hover,.rating label.active{filter:grayscale(0) brightness(1);transform:scale(1.15)}
+.rating input{display:none}
+
+/* Emoji select */
+.emoji-select{display:flex;gap:6px;margin-top:6px}
+.emoji-opt{cursor:pointer;font-size:18px;padding:4px 8px;border:2px solid transparent;border-radius:0;transition:border-color .3s,transform .2s,background .3s;filter:grayscale(.5);opacity:.6}
+.emoji-opt:hover{filter:grayscale(0);opacity:1;transform:scale(1.1)}
+.emoji-opt.selected{border-color:#e879f9;filter:grayscale(0);opacity:1;background:rgba(232,121,249,.08)}
+
+/* Submit button */
+.submit-btn{display:block;width:100%;padding:12px;background:none;border:2px solid #e879f944;color:#e879f9;font-family:inherit;font-size:9px;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:background .3s,border-color .3s,letter-spacing .3s,box-shadow .3s,transform .2s;margin-top:24px}
+.submit-btn:hover{background:rgba(232,121,249,.06);border-color:#e879f9;letter-spacing:6px;box-shadow:0 0 25px rgba(232,121,249,.12)}
+.submit-btn:active{transform:scale(.98)}
+
+/* Success state */
+.success-msg{display:none;text-align:center;padding:40px 20px}
+.success-msg.show{display:block;animation:fadeUp .5s ease-out}
+.success-icon{font-size:36px;margin-bottom:12px;display:block}
+.success-title{font-size:14px;letter-spacing:4px;color:#e879f9;margin-bottom:10px}
+.success-text{font-size:7px;color:#8a6aaa;letter-spacing:1px;line-height:2.4}
+.success-back{display:inline-block;margin-top:16px;padding:8px 20px;border:2px solid #e879f944;color:#e879f9;font-family:inherit;font-size:7px;letter-spacing:3px;text-decoration:none;transition:background .3s,letter-spacing .3s}
+.success-back:hover{background:rgba(232,121,249,.06);letter-spacing:5px}
+
+/* Pixel sparkles */
+.sparkle{position:absolute;width:2px;height:2px;background:#e879f9;pointer-events:none;animation:sparkleAnim 1.2s ease-out forwards}
+@keyframes sparkleAnim{0%{opacity:1;transform:scale(1) translateY(0)}100%{opacity:0;transform:scale(0) translateY(-20px)}}
+
+footer{padding:30px;text-align:center;font-size:6px;color:#2a4460;letter-spacing:2px;position:relative;z-index:1;margin-top:auto}
+footer a{color:#4a6a8a;text-decoration:none;transition:color .2s}
+footer a:hover{color:#ffe8a0}
+</style>
+</head>
+<body>
+
+<a href="/" class="back-link">◂ BACK TO MAP</a>
+
+<header>
+  <h1>💬 DROP FEEDBACK</h1>
+  <p>WE ACTUALLY READ EVERY RESPONSE</p>
+  <div class="subtitle">FOUND A BUG? HAVE IDEAS? WANT A FEATURE? JUST WANT TO SAY NICE THINGS? WE'RE ALL EARS.</div>
+</header>
+
+<div class="form-wrapper">
+  <div class="form-card">
+
+    <form id="feedback-form">
+
+      <div class="field">
+        <label>HOW ARE YOU FEELING ABOUT CITYSCOPE? <span class="required">*</span></label>
+        <div class="emoji-select" id="mood-select">
+          <span class="emoji-opt" data-value="love" title="Love it!">😍</span>
+          <span class="emoji-opt" data-value="great" title="Great">🤩</span>
+          <span class="emoji-opt" data-value="good" title="Good">😊</span>
+          <span class="emoji-opt" data-value="meh" title="Meh">😐</span>
+          <span class="emoji-opt" data-value="confused" title="Confused">🤔</span>
+          <span class="emoji-opt" data-value="bug" title="Found a bug">🐛</span>
+        </div>
+        <input type="hidden" id="mood-value" required>
+      </div>
+
+      <div class="field">
+        <label>TYPE OF FEEDBACK <span class="required">*</span></label>
+        <select id="feedback-type" required>
+          <option value="" disabled selected>SELECT ONE...</option>
+          <option value="bug">🐛 BUG REPORT</option>
+          <option value="feature">✨ FEATURE REQUEST</option>
+          <option value="city">🏙️ NEW CITY REQUEST</option>
+          <option value="event">📅 EVENT DATA ISSUE</option>
+          <option value="design">🎨 DESIGN / UI FEEDBACK</option>
+          <option value="praise">💚 JUST SAYING NICE THINGS</option>
+          <option value="other">📝 OTHER</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>WHICH CITY? (OPTIONAL)</label>
+        <select id="feedback-city">
+          <option value="" selected>ALL / GENERAL</option>
+          <option value="bangalore">BENGALURU</option>
+          <option value="mumbai">MUMBAI</option>
+          <option value="delhi">DELHI NCR</option>
+          <option value="landing">LANDING PAGE</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>YOUR FEEDBACK <span class="required">*</span></label>
+        <textarea id="feedback-text" placeholder="Tell us what's on your mind...&#10;&#10;If reporting a bug: what happened? what did you expect?&#10;If requesting a feature: describe your dream feature." required></textarea>
+        <div class="hint">THE MORE DETAIL, THE BETTER WE CAN HELP</div>
+      </div>
+
+      <div class="field">
+        <label>RATE YOUR EXPERIENCE</label>
+        <div class="rating" id="rating">
+          <label data-value="1">◇</label>
+          <label data-value="2">◇</label>
+          <label data-value="3">◇</label>
+          <label data-value="4">◇</label>
+          <label data-value="5">◇</label>
+        </div>
+        <input type="hidden" id="rating-value">
+        <div class="hint">1 = NEEDS WORK · 5 = PIXEL PERFECTION</div>
+      </div>
+
+      <div class="field">
+        <label>YOUR NAME (OPTIONAL)</label>
+        <input type="text" id="feedback-name" placeholder="Anonymous submissions welcome">
+      </div>
+
+      <div class="field">
+        <label>YOUR EMAIL (OPTIONAL)</label>
+        <input type="email" id="feedback-email" placeholder="Only if you want us to follow up">
+        <div class="hint">WE WON'T SPAM YOU — PROMISE</div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submit-btn">▸ SEND FEEDBACK</button>
+    </form>
+
+    <div class="success-msg" id="success-msg">
+      <span class="success-icon">✨</span>
+      <div class="success-title">THANK YOU!</div>
+      <div class="success-text">
+        YOUR FEEDBACK HAS BEEN RECORDED.<br>
+        WE READ EVERY SINGLE RESPONSE AND USE IT<br>
+        TO MAKE CITYSCOPE BETTER.<br><br>
+        YOU'RE AWESOME. ◈
+      </div>
+      <a href="/" class="success-back">◂ BACK TO CITYSCOPE</a>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  CITYSCOPE v1.0 · <a href="/">HOME</a> · <a href="/submit">SUBMIT CITY</a> · <a href="https://github.com/tashasho/cityscope" target="_blank">GITHUB</a> · MIT LICENSE
+</footer>
+
+<script>
+// Emoji mood selector
+const moodSelect = document.getElementById('mood-select');
+const moodValue = document.getElementById('mood-value');
+moodSelect.querySelectorAll('.emoji-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    moodSelect.querySelectorAll('.emoji-opt').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    moodValue.value = opt.dataset.value;
+
+    // Sparkle effect
+    for(let i = 0; i < 5; i++) {
+      const sparkle = document.createElement('div');
+      sparkle.className = 'sparkle';
+      sparkle.style.left = (opt.offsetLeft + opt.offsetWidth/2 + (Math.random()-0.5)*20) + 'px';
+      sparkle.style.top = (opt.offsetTop + (Math.random()-0.5)*10) + 'px';
+      opt.parentElement.appendChild(sparkle);
+      setTimeout(() => sparkle.remove(), 1200);
+    }
+  });
+});
+
+// Star rating
+const ratingEl = document.getElementById('rating');
+const ratingValue = document.getElementById('rating-value');
+const diamonds = ['◇','◇','◇','◇','◇'];
+const filledDiamond = '◆';
+
+ratingEl.querySelectorAll('label').forEach(star => {
+  star.addEventListener('mouseenter', () => {
+    const val = parseInt(star.dataset.value);
+    ratingEl.querySelectorAll('label').forEach((s, i) => {
+      s.textContent = i < val ? filledDiamond : '◇';
+      s.style.color = i < val ? '#e879f9' : '#2a4460';
+    });
+  });
+
+  star.addEventListener('click', () => {
+    const val = parseInt(star.dataset.value);
+    ratingValue.value = val;
+    ratingEl.querySelectorAll('label').forEach((s, i) => {
+      s.classList.toggle('active', i < val);
+      s.textContent = i < val ? filledDiamond : '◇';
+      s.style.color = i < val ? '#e879f9' : '#2a4460';
+    });
+  });
+});
+
+ratingEl.addEventListener('mouseleave', () => {
+  const val = parseInt(ratingValue.value) || 0;
+  ratingEl.querySelectorAll('label').forEach((s, i) => {
+    s.textContent = i < val ? filledDiamond : '◇';
+    s.style.color = i < val ? '#e879f9' : '#2a4460';
+  });
+});
+
+// Form submission
+const form = document.getElementById('feedback-form');
+const successMsg = document.getElementById('success-msg');
+const submitBtn = document.getElementById('submit-btn');
+
+form.addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  // Validate mood
+  if (!moodValue.value) {
+    moodSelect.style.outline = '2px solid #ff6b6b';
+    moodSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => moodSelect.style.outline = 'none', 2000);
+    return;
+  }
+
+  // Collect data
+  const data = {
+    mood: moodValue.value,
+    type: document.getElementById('feedback-type').value,
+    city: document.getElementById('feedback-city').value,
+    feedback: document.getElementById('feedback-text').value.trim(),
+    rating: ratingValue.value || null,
+    name: document.getElementById('feedback-name').value.trim(),
+    email: document.getElementById('feedback-email').value.trim(),
+    timestamp: new Date().toISOString()
+  };
+
+  console.log('Feedback submission:', data);
+
+  // Submit to Google Form
+  const gFormUrl = 'https://docs.google.com/forms/d/e/1AOlEPf8sWH6-ohmB2yqP1tdWEiysJUqGLdksNHniJWA/formResponse';
+  const formData = new FormData();
+  formData.append('entry.mood', data.mood);
+  formData.append('entry.type', data.type);
+  formData.append('entry.city', data.city);
+  formData.append('entry.feedback', data.feedback);
+  formData.append('entry.rating', data.rating || '');
+  formData.append('entry.name', data.name);
+  formData.append('entry.email', data.email);
+
+  // Fire-and-forget (CORS)
+  fetch(gFormUrl, { method: 'POST', body: formData, mode: 'no-cors' }).catch(() => {});
+
+  // Show success
+  submitBtn.textContent = '✓ SENT';
+  submitBtn.style.borderColor = '#e879f9';
+  submitBtn.style.color = '#f0abff';
+  submitBtn.disabled = true;
+
+  setTimeout(() => {
+    form.style.display = 'none';
+    successMsg.classList.add('show');
+  }, 600);
+});
+</script>
+</body>
+</html>
