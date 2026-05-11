@@ -4,7 +4,7 @@
 
 > Pixel art event maps for Indian cities. Zero dependencies. Zero build steps. 100% vibes.
 
-**[🎮 Play the Demo →](https://cityscope.vercel.app)**
+**[🎮 Play the Demo →](https://cityscope-tau.vercel.app)**
 
 ---
 
