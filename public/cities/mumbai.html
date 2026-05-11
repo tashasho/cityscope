@@ -367,7 +367,14 @@ document.getElementById('ev-ct').textContent=`${totalEv} EVENTS · ${V.length} V
 
 // ═══ CANVAS ═══
 const cv=document.getElementById('map'),cx=cv.getContext('2d');
-cv.width=CO*TS;cv.height=RO*TS;
+const mapW=CO*TS,mapH=RO*TS;
+function resizeCanvas(){
+  const area=document.getElementById('ma');
+  cv.width=Math.max(mapW,area.clientWidth);
+  cv.height=Math.max(mapH,area.clientHeight);
+}
+resizeCanvas();window.addEventListener('resize',resizeCanvas);
+const ofsX=Math.max(0,Math.floor((cv.width-mapW)/2)),ofsY=Math.max(0,Math.floor((cv.height-mapH)/2));
 const mmC=document.getElementById('mc'),mmX=mmC.getContext('2d');mmC.width=CO;mmC.height=RO;
 const svC=document.getElementById('svc2'),svX=svC.getContext('2d');
 
@@ -437,8 +444,41 @@ const VIBES=[
   {t:'"sea breeze"',lat:18.97,lng:72.82,c:'#60a5fa'}
 ];
 function dL(){
-  LB.forEach(l=>{const p=geo(l.lat,l.lng);cx.font=`${l.s}px 'Silkscreen',monospace`;cx.fillStyle=nit?'rgba(255,208,60,.3)':'rgba(255,250,200,.55)';cx.fillText(l.t,p.c*TS+1,p.r*TS+TS-2)});
-  VIBES.forEach(v=>{const p=geo(v.lat,v.lng);cx.font=`italic 4px 'Courier New',monospace`;cx.fillStyle=(nit?v.c+'25':v.c+'40');cx.fillText(v.t,p.c*TS,p.r*TS+TS-1)});
+  // Locality cards with background
+  LB.forEach(l=>{
+    const p=geo(l.lat,l.lng);
+    const x=p.c*TS,y=p.r*TS;
+    cx.font=`bold ${l.s}px 'Silkscreen',monospace`;
+    const tw=cx.measureText(l.t).width;
+    const pw=tw+6,ph=l.s+5;
+    cx.fillStyle=nit?'rgba(5,10,18,.75)':'rgba(20,10,0,.55)';
+    cx.fillRect(x-1,y-ph+2,pw,ph);
+    cx.strokeStyle=nit?'rgba(255,208,60,.2)':'rgba(255,250,200,.35)';
+    cx.lineWidth=1;cx.strokeRect(x-1,y-ph+2,pw,ph);
+    cx.fillStyle=nit?'rgba(255,208,60,.5)':'rgba(255,250,200,.75)';
+    cx.fillText(l.t,x+2,y-1);
+  });
+  VIBES.forEach(v=>{
+    const p=geo(v.lat,v.lng);
+    cx.font=`italic 4px 'Courier New',monospace`;
+    cx.fillStyle=(nit?v.c+'25':v.c+'40');
+    cx.fillText(v.t,p.c*TS,p.r*TS+TS-1);
+  });
+}
+
+// Zone boundary outlines for visual segregation
+function drawZoneBorders(){
+  cx.lineWidth=1;cx.setLineDash([3,3]);
+  const pals=['#8b3a2a','#5a8a3a','#3a5a8a','#d4a830'];
+  ZONES.forEach((z,i)=>{
+    const pts=z.poly.map(p=>{const t=geo(p[0],p[1]);return{x:t.c*TS,y:t.r*TS}});
+    const pal=pals[z.pal%pals.length];
+    cx.strokeStyle=nit?pal+'40':pal+'60';
+    cx.beginPath();
+    pts.forEach((p,j)=>j===0?cx.moveTo(p.x,p.y):cx.lineTo(p.x,p.y));
+    cx.closePath();cx.stroke();
+  });
+  cx.setLineDash([]);
 }
 
 // ═══ PHASE 2: LIFE ═══
@@ -566,19 +606,22 @@ function drawMM(){
 // ═══ RENDER ═══
 function render(){
   fr++;cx.fillStyle=nit?'#030810':(rain?'#607888':'#3080c0');cx.fillRect(0,0,cv.width,cv.height);
+  cx.save();cx.translate(ofsX,ofsY);
   for(let r=0;r<RO;r++)for(let c=0;c<CO;c++)drawTile(r,c,MAP[r][c]);
-  dL();drawAutos();drawMetro();drawLandmarks();
-  if(nit)dNi();drawBirds();drawRain();updParticles();
-  V.forEach(v=>dM(v));if(sel)drawSV(sel);
+  drawZoneBorders();dL();drawAutos();drawMetro();drawLandmarks();
+  drawBirds();drawRain();updParticles();
+  V.forEach(v=>dM(v));
+  cx.restore();
+  if(nit)dNi();if(sel)drawSV(sel);
   if(fr%10===0)drawMM();
   requestAnimationFrame(render);
 }
 
 // ═══ INTERACTIONS ═══
-cv.addEventListener('click',e=>{if(dragging)return;const rc=cv.getBoundingClientRect(),sx=cv.width/rc.width,sy=cv.height/rc.height,mx=(e.clientX-rc.left)*sx,my=(e.clientY-rc.top)*sy;
+cv.addEventListener('click',e=>{if(dragging)return;const rc=cv.getBoundingClientRect(),sx=cv.width/rc.width,sy=cv.height/rc.height,mx=(e.clientX-rc.left)*sx-ofsX,my=(e.clientY-rc.top)*sy-ofsY;
   let hit=null;V.forEach(v=>{if(!vis(v))return;const vx=(v.c||0)*TS+TS/2,vy=(v.r||0)*TS+TS/2;if(Math.hypot(mx-vx,my-vy)<16)hit=v});
   if(hit){sel=hit;openP(hit);panTo((hit.c||0)*TS,(hit.r||0)*TS)}else{sel=null;closeP()}});
-cv.addEventListener('mousemove',e=>{const rc=cv.getBoundingClientRect(),sx=cv.width/rc.width,sy=cv.height/rc.height,mx=(e.clientX-rc.left)*sx,my=(e.clientY-rc.top)*sy;
+cv.addEventListener('mousemove',e=>{const rc=cv.getBoundingClientRect(),sx=cv.width/rc.width,sy=cv.height/rc.height,mx=(e.clientX-rc.left)*sx-ofsX,my=(e.clientY-rc.top)*sy-ofsY;
   const tt=document.getElementById('tt');let hov=null;V.forEach(v=>{if(!vis(v))return;const vx=(v.c||0)*TS+TS/2,vy=(v.r||0)*TS+TS/2;if(Math.hypot(mx-vx,my-vy)<16)hov=v});
   if(hov){cv.style.cursor='pointer';tt.innerHTML=`<b style="color:${CC[hov.cat]}">${hov.nm.replace('\n','<br>')}</b><br><span style="color:${SC[hov.src]};font-size:4px">${SN[hov.src]}</span><br><span style="color:#5a7a9a">${hov.ev.length} events</span>`;const cr=ma.getBoundingClientRect();tt.style.left=(e.clientX-cr.left+10)+'px';tt.style.top=(e.clientY-cr.top-8)+'px';tt.style.display='block'}else{cv.style.cursor='grab';tt.style.display='none'}});
 
