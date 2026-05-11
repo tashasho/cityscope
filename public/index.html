@@ -52,6 +52,22 @@ header p{font-size:clamp(8px,1.5vw,11px);color:#7a9ab0;letter-spacing:3px;line-h
 .card-enter{display:block;margin-top:12px;padding:8px;background:none;border:2px solid #ffe8a044;color:#ffe8a0;font-family:inherit;font-size:8px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;width:100%;text-align:center;transition:background .3s,border-color .3s,letter-spacing .3s}
 .card-enter:hover{background:rgba(255,232,160,.08);border-color:#ffe8a0;letter-spacing:5px}
 
+/* CTA Section */
+.cta-section{max-width:1000px;width:100%;padding:10px 20px 0;position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:20px;animation:fadeUp .6s ease-out .5s both}
+@media(max-width:600px){.cta-section{grid-template-columns:1fr}}
+.cta-card{background:linear-gradient(180deg,#0c1a2a,#08111c);border:2px solid #1a2e48;padding:20px;text-align:center;transition:border-color .4s,transform .3s,box-shadow .4s}
+.cta-card:hover{border-color:#ffe8a066;transform:translateY(-3px);box-shadow:0 8px 30px rgba(255,232,160,.05)}
+.cta-icon{font-size:20px;margin-bottom:8px;display:block}
+.cta-title{font-size:10px;letter-spacing:3px;margin-bottom:6px}
+.cta-desc{font-size:6px;color:#4a6a8a;letter-spacing:1px;line-height:2.2;margin-bottom:12px}
+.cta-btn{display:inline-block;padding:8px 20px;border:2px solid;font-family:inherit;font-size:7px;letter-spacing:3px;text-transform:uppercase;text-decoration:none;cursor:pointer;background:none;transition:background .3s,letter-spacing .3s,box-shadow .3s}
+.cta-btn:hover{letter-spacing:5px}
+.cta-btn.submit{color:#78ffd6;border-color:#78ffd644}
+.cta-btn.submit:hover{background:rgba(120,255,214,.06);box-shadow:0 0 20px rgba(120,255,214,.1)}
+.cta-btn.feedback{color:#e879f9;border-color:#e879f944}
+.cta-btn.feedback:hover{background:rgba(232,121,249,.06);box-shadow:0 0 20px rgba(232,121,249,.1)}
+.cta-hint{font-size:5px;color:#2a4460;letter-spacing:1px;margin-top:8px;line-height:2}
+
 footer{padding:30px;text-align:center;font-size:6px;color:#2a4460;letter-spacing:2px;position:relative;z-index:1}
 footer a{color:#4a6a8a;text-decoration:none;transition:color .2s}
 footer a:hover{color:#ffe8a0}
@@ -129,6 +145,24 @@ footer a:hover{color:#ffe8a0}
     </div>
   </div>
 
+</div>
+
+<!-- CTA: Submit + Feedback -->
+<div class="cta-section">
+  <div class="cta-card">
+    <span class="cta-icon">🏙️</span>
+    <div class="cta-title" style="color:#78ffd6">SUBMIT YOUR CITY</div>
+    <div class="cta-desc">Know cool event sources in your city?<br>Drop them here — once we have enough sources, we'll build the map.</div>
+    <a class="cta-btn submit" href="https://forms.gle/YOUR_CITY_FORM_ID" target="_blank">▸ ADD SOURCES</a>
+    <div class="cta-hint">DELHI · HYDERABAD · CHENNAI · PUNE · KOLKATA · YOUR CITY?</div>
+  </div>
+  <div class="cta-card">
+    <span class="cta-icon">💬</span>
+    <div class="cta-title" style="color:#e879f9">DROP FEEDBACK</div>
+    <div class="cta-desc">Found a bug? Have ideas? Want a feature?<br>Tell us what you think — we actually read these.</div>
+    <a class="cta-btn feedback" href="https://forms.gle/YOUR_FEEDBACK_FORM_ID" target="_blank">▸ SEND FEEDBACK</a>
+    <div class="cta-hint">NO GITHUB ACCOUNT NEEDED · ANONYMOUS OK</div>
+  </div>
 </div>
 
 <footer>

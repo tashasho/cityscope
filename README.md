@@ -146,29 +146,25 @@ Each city has a venues array `V`. Here's the format:
 
 ---
 
-## 🤝 Contributing
+## 🤝 Want to Help?
 
-### Delhi Needs You 🙏
+We don't want PRs. We want **event sources**.
 
-Delhi NCR is the next city. If you know Delhi, we need you more than Delhi needs another mall.
+### 📝 Submit Your City
 
-1. Fork the repo
-2. Edit `public/cities/delhi.html`
-3. Add venues with real coordinates (Google Maps → right-click → copy coordinates)
-4. PR with your source links
+Know cool event platforms in your city? Drop them in our form — city name, event source URLs, neighborhoods worth mapping. Once we collect enough sources for a city, we'll build the pixel map and make it live.
 
-**Neighborhoods to map:** Connaught Place · Hauz Khas · Khan Market · Saket · GK · Defence Colony · Chandni Chowk · Dwarka · Noida · Cyber City · Nehru Place
+**[▸ SUBMIT CITY SOURCES](https://forms.gle/YOUR_CITY_FORM_ID)**
 
-**Sources to scrape:** Luma · District · BookMyShow · Eventbrite · Townscript · AllEvents · Meetup · eChai
+Currently scouting: **Delhi NCR** · Hyderabad · Chennai · Pune · Kolkata · Jaipur · Ahmedabad · Kochi · Goa
 
-### Want to Add Your City?
+### 💬 Drop Feedback
 
-1. Copy any city HTML as a template
-2. Update the bounding box: `const CITY = {n, s, w, e}`
-3. Customize the `mk()` map generator for your city's geography
-4. Update `getZone()` for neighborhoods
-5. Add venues, update palettes, submit PR
-6. Become a legend
+Found a bug? Have a feature idea? Just want to say nice things? We actually read every response.
+
+**[▸ SEND FEEDBACK](https://forms.gle/YOUR_FEEDBACK_FORM_ID)**
+
+No GitHub account needed. Anonymous submissions welcome.
 
 ---
 
